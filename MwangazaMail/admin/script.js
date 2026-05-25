@@ -71,6 +71,7 @@ const STRICT_LIVE_MODE = window.location.hostname !== "localhost";
 const CACHE_KEY = "mwangaza_admin_live_cache_v1";
 const API_BASE_KEY = "mwangaza_api_base";
 const API_BASES_KEY = "mwangaza_api_bases";
+const PRODUCTION_API_BASE = "https://api.mysmartwork.tech/api/admin";
 const API_TIMEOUT_MS = 12000;
 const API_HEALTH_TIMEOUT_MS = 5000;
 const API_GET_RETRIES = 2;
@@ -117,6 +118,11 @@ const apiCandidates = (() => {
     savedApiBases = [];
   }
 
+  if (STRICT_LIVE_MODE && /localhost|127\.0\.0\.1/i.test(savedApiBase)) {
+    savedApiBase = "";
+    savedApiBases = savedApiBases.filter((item) => !/localhost|127\.0\.0\.1/i.test(item));
+  }
+
   if (normalizedQueryBases.length) {
     try {
       localStorage.setItem(API_BASE_KEY, normalizedQueryBases[0]);
@@ -128,6 +134,7 @@ const apiCandidates = (() => {
 
   const candidates = [
     ...normalizedQueryBases,
+    PRODUCTION_API_BASE,
     savedApiBase,
     ...savedApiBases
   ];
