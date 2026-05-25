@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260525-2" />
   </head>
   <body>
     <script>
@@ -32,6 +32,7 @@
           <button class="nav-item" data-tab="abonnements" type="button">Abonnements</button>
           <button class="nav-item" data-tab="analytics" type="button">Analytics</button>
           <button class="nav-item" data-tab="fonctionnalites" type="button">Fonctionnalites</button>
+          <button class="nav-item" data-tab="seo" type="button">SEO</button>
         </nav>
 
         <button class="logout-btn" id="logoutBtn" type="button">Deconnexion</button>
@@ -83,7 +84,16 @@
 
           <section class="panel-card table-card">
             <h2>Derniers signalements (21)</h2>
-            <div class="table-wrap"><table><thead><tr><th>Ref.</th><th>Categorie</th><th>Institution</th><th>Ville</th><th>Severite</th><th>Statut</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+            <div class="filter-row" id="incidentFilterRow">
+              <select id="filterCategory"><option value="">Categorie</option></select>
+              <select id="filterCity"><option value="">Ville</option></select>
+              <select id="filterSeverity"><option value="">Severite</option></select>
+              <select id="filterStatus"><option value="">Statut</option></select>
+              <input id="filterSearch" type="search" placeholder="Rechercher ref / institution" />
+              <button id="applyIncidentFilters" type="button">Filtrer</button>
+              <button id="resetIncidentFilters" type="button">Reset</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Ref.</th><th>Categorie</th><th>Institution</th><th>Ville</th><th>Severite</th><th>Statut</th><th>Revision</th></tr></thead><tbody id="reportRows"></tbody></table></div>
           </section>
         </section>
 
@@ -125,9 +135,46 @@
             <div class="feature-list" id="featureList"></div>
           </section>
         </section>
+
+        <section id="seoSection" class="tab-section">
+          <section class="stats-grid">
+            <article class="stat-card"><p class="stat-value" id="seoEventsCount">0</p><p class="stat-label">Acces traces</p></article>
+            <article class="stat-card"><p class="stat-value" id="seoRouteCount">0</p><p class="stat-label">Routes actives</p></article>
+            <article class="stat-card"><p class="stat-value" id="seoUserCount">0</p><p class="stat-label">Utilisateurs uniques</p></article>
+            <article class="stat-card"><p class="stat-value" id="seoLocationCount">0</p><p class="stat-label">Localisations detectees</p></article>
+          </section>
+
+          <section class="panel-card table-card">
+            <h2>Trafic & acces (SEO)</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Heure</th><th>Route</th><th>Utilisateur</th><th>Localisation</th><th>IP</th><th>Agent</th>
+                  </tr>
+                </thead>
+                <tbody id="seoRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel-card table-card">
+            <h2>Audit trail</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Heure</th><th>Table</th><th>Record</th><th>Action</th><th>Par</th><th>Avant</th><th>Apres</th>
+                  </tr>
+                </thead>
+                <tbody id="auditRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
       </main>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260525-2"></script>
   </body>
 </html>

@@ -7,6 +7,34 @@ const html = htm.bind(React.createElement);
 
 const AUTH_KEY = "mwangaza_auth";
 const adminUrl = new URL("./admin/", import.meta.url).href;
+const COOKIE_KEY = "mwangaza_cookie_consent";
+
+const apiCandidates =
+  window.location.hostname === "localhost" && window.location.port === "5500"
+    ? ["http://localhost:4000/api/admin"]
+    : ["/api/admin", "http://localhost:4000/api/admin"];
+
+async function trackAccess(route) {
+  const payload = {
+    route,
+    locationText: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    userEmail: "public-visitor@mwangaza.cd",
+    metadata: { locale: navigator.language }
+  };
+
+  for (const base of apiCandidates) {
+    try {
+      const response = await fetch(`${base}/track-access`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) return;
+    } catch (_error) {
+      // Try next candidate endpoint.
+    }
+  }
+}
 
 const partnerLogos = ["Ministere", "PNUD", "ONG Congo", "UNDP", "Transparency Intl"];
 
@@ -314,13 +342,39 @@ function LoginPortal({ isOpen, onClose, onSubmit }) {
   );
 }
 
+function CookieBanner({ visible, onAccept, onReject }) {
+  if (!visible) return null;
+  return html`
+    <div className="cookie-banner" role="dialog" aria-live="polite">
+      <div>
+        <strong>Gestion des cookies</strong>
+        <p>Nous utilisons des cookies pour ameliorer l'experience utilisateur, la mesure d'audience et la securite.</p>
+      </div>
+      <div className="cookie-actions">
+        <button className="btn btn-outline" type="button" onClick=${onReject}>Refuser</button>
+        <button className="btn btn-solid" type="button" onClick=${onAccept}>Accepter</button>
+      </div>
+    </div>
+  `;
+}
+
 function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [demoTab, setDemoTab] = useState("whatsapp");
+  const [cookieVisible, setCookieVisible] = useState(localStorage.getItem(COOKIE_KEY) === null);
+
+  useEffect(() => {
+    trackAccess(window.location.pathname || "/");
+  }, []);
 
   const goToAdmin = () => {
     localStorage.setItem(AUTH_KEY, "true");
     window.location.assign(adminUrl);
+  };
+
+  const saveCookieConsent = (value) => {
+    localStorage.setItem(COOKIE_KEY, value);
+    setCookieVisible(false);
   };
 
   return html`
@@ -845,6 +899,12 @@ function App() {
           <p>✉ contact@mwangazamail.cd · Propulsé par David B. — Pour la transparence en RDC</p>
         </div>
       </footer>
+
+      <${CookieBanner}
+        visible=${cookieVisible}
+        onAccept=${() => saveCookieConsent("accepted")}
+        onReject=${() => saveCookieConsent("rejected")}
+      />
 
       <${LoginPortal} isOpen=${loginOpen} onClose=${() => setLoginOpen(false)} onSubmit=${goToAdmin} />
     </div>
