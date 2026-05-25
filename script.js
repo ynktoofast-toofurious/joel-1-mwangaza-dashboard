@@ -403,6 +403,7 @@ function SandboxNotice({ isOpen, onClose }) {
     html`
       <div className="sandbox-backdrop" role="dialog" aria-modal="true" aria-labelledby="sandbox-title">
         <section className="sandbox-card">
+          <button className="sandbox-close" type="button" aria-label="Fermer l'avis sandbox" onClick=${onClose}>×</button>
           <div className="sandbox-pill">YNK-TechUSA Sandbox</div>
           <h2 id="sandbox-title">Environnement de test client</h2>
           <p>
@@ -417,6 +418,19 @@ function SandboxNotice({ isOpen, onClose }) {
     `,
     document.body
   );
+}
+
+function SandboxBanner({ visible, onClose }) {
+  if (!visible) return null;
+  return html`
+    <div className="sandbox-banner" role="status" aria-live="polite">
+      <span>
+        Environnement sandbox YNK-TechUSA: zone de test client, non destination finale.
+        <a href="https://ynk-techusa.com/" target="_blank" rel="noreferrer">Site officiel</a>
+      </span>
+      <button type="button" aria-label="Fermer la bannière sandbox" onClick=${onClose}>×</button>
+    </div>
+  `;
 }
 
 function CookieBanner({ visible, onAccept, onReject }) {
@@ -438,6 +452,7 @@ function CookieBanner({ visible, onAccept, onReject }) {
 function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [sandboxOpen, setSandboxOpen] = useState(true);
+  const [sandboxBannerVisible, setSandboxBannerVisible] = useState(false);
   const [demoTab, setDemoTab] = useState("whatsapp");
   const [cookieVisible, setCookieVisible] = useState(localStorage.getItem(COOKIE_KEY) === null);
 
@@ -455,8 +470,14 @@ function App() {
     setCookieVisible(false);
   };
 
+  const closeSandboxNotice = () => {
+    setSandboxOpen(false);
+    setSandboxBannerVisible(true);
+  };
+
   return html`
     <div className="landing-shell">
+      <${SandboxBanner} visible=${sandboxBannerVisible} onClose=${() => setSandboxBannerVisible(false)} />
       <header className="site-header">
         <a className="brand" href="#hero">
           <span className="brand-mark"></span>
@@ -981,7 +1002,7 @@ function App() {
         </div>
       </footer>
 
-      <${SandboxNotice} isOpen=${sandboxOpen} onClose=${() => setSandboxOpen(false)} />
+      <${SandboxNotice} isOpen=${sandboxOpen} onClose=${closeSandboxNotice} />
 
       <${CookieBanner}
         visible=${cookieVisible}

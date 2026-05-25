@@ -1533,12 +1533,25 @@ details p {
 
 .sandbox-card {
   width: min(760px, 100%);
+  position: relative;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: linear-gradient(165deg, #f7f9ff, #ffffff);
   box-shadow: 0 36px 80px rgba(7, 10, 24, 0.55);
   padding: 34px;
   text-align: center;
+}
+
+.sandbox-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: none;
+  background: transparent;
+  color: #687298;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .sandbox-pill {
@@ -1583,6 +1596,46 @@ details p {
 .sandbox-cta {
   margin-top: 24px;
   width: 100%;
+}
+
+.sandbox-banner {
+  position: sticky;
+  top: 0;
+  z-index: 95;
+  margin: 0 auto 12px;
+  width: min(1320px, calc(100% - 44px));
+  border-radius: 14px;
+  border: 1px solid rgba(99, 70, 229, 0.3);
+  background: #f2efff;
+  color: #393f57;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 10px 24px rgba(40, 32, 94, 0.1);
+}
+
+.sandbox-banner span {
+  font-weight: 600;
+}
+
+.sandbox-banner a {
+  margin-left: 8px;
+  color: #4935da;
+  font-weight: 800;
+}
+
+.sandbox-banner button {
+  border: 1px solid #cfc8f5;
+  background: #fff;
+  color: #4d577a;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .portal-footer {
@@ -1697,6 +1750,12 @@ details p {
   .browser-mock,
   .support-strip {
     width: calc(100% - 20px);
+  }
+
+  .sandbox-banner {
+    width: calc(100% - 20px);
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .header-actions,
