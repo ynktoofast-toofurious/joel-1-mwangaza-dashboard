@@ -296,13 +296,17 @@ const footerColumns = {
 const footerSocials = ["𝕏", "in", "✉"];
 
 function LoginPortal({ isOpen, onClose, onSubmit }) {
-  const [email, setEmail] = useState("admin@mwangaza.cd");
-  const [password, setPassword] = useState("demo123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    setEmail("");
+    setPassword("");
+    setShowPassword(false);
     return () => {
       document.body.style.overflow = previousOverflow;
     };
@@ -327,11 +331,27 @@ function LoginPortal({ isOpen, onClose, onSubmit }) {
             }}
           >
             <label htmlFor="portal-email">Email</label>
-            <input id="portal-email" type="email" value=${email} onInput=${(event) => setEmail(event.target.value)} />
+            <input id="portal-email" type="email" value=${email} placeholder="nom@organisation.com" onInput=${(event) => setEmail(event.target.value)} />
             <label htmlFor="portal-password">Mot de passe</label>
-            <input id="portal-password" type="password" value=${password} onInput=${(event) => setPassword(event.target.value)} />
+            <div className="portal-input-wrap">
+              <input
+                id="portal-password"
+                type=${showPassword ? "text" : "password"}
+                value=${password}
+                placeholder="Saisissez votre mot de passe"
+                onInput=${(event) => setPassword(event.target.value)}
+              />
+              <button
+                className="portal-eye"
+                type="button"
+                aria-label=${showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                onClick=${() => setShowPassword((value) => !value)}
+              >
+                ${showPassword ? "🙈" : "👁"}
+              </button>
+            </div>
             <div className="portal-footer">
-              <span>Demo credentials pre-remplies pour tester rapidement.</span>
+              <span>Saisissez vos identifiants pour acceder au dashboard.</span>
               <button className="btn btn-solid" type="submit">Entrer dans le dashboard</button>
             </div>
           </form>
