@@ -45,44 +45,46 @@ export async function setUserPassword(userKey, password, changedBy, fallbackEmai
   const hash = scryptSync(password, salt, 64).toString("hex");
 
   const normalizedUserKey = String(userKey).trim();
-
-  const runUpdateByKey = () =>
-    query("update dim_user set password_hash = $1 where user_key = $2", [`${salt}:${hash}`, normalizedUserKey]);
-
   const normalizedEmail = String(fallbackEmail || "").trim().toLowerCase();
   const normalizedFullName = String(fallbackFullName || "").trim().toLowerCase();
-  const runUpdateByIdentity = () =>
-    query(
-      "update dim_user set password_hash = $1 where lower(trim(email)) = $2 or lower(trim(full_name)) = $3",
-      [`${salt}:${hash}`, normalizedEmail, normalizedFullName]
-    );
 
-  let result;
+  const hasRows = (res) => Array.isArray(res?.rows) && res.rows.length > 0;
+  let resolvedUser = { rows: [] };
+
+  if (normalizedEmail) {
+    resolvedUser = await query("select user_key from dim_user where lower(trim(email)) = $1 limit 1", [normalizedEmail]);
+  }
+
+  if (!hasRows(resolvedUser) && normalizedFullName) {
+    resolvedUser = await query("select user_key from dim_user where lower(trim(full_name)) = $1 limit 1", [normalizedFullName]);
+  }
+
+  if (!hasRows(resolvedUser) && normalizedUserKey) {
+    resolvedUser = await query("select user_key from dim_user where user_key = $1 limit 1", [normalizedUserKey]);
+  }
+
+  if (!hasRows(resolvedUser)) return null;
+
+  const effectiveUserKey = String(resolvedUser.rows[0].user_key);
+
+  const runUpdate = () => query("update dim_user set password_hash = $1 where user_key = $2", [`${salt}:${hash}`, effectiveUserKey]);
+
   try {
-    result = await runUpdateByKey();
+    await runUpdate();
   } catch (error) {
     const message = String(error?.message || "").toLowerCase();
     if (message.includes("password_hash") || message.includes("column") || message.includes("does not exist")) {
       await ensurePasswordColumn();
-      result = await runUpdateByKey();
+      await runUpdate();
     } else {
       throw error;
     }
   }
 
-  if (!result?.rowCount && (normalizedEmail || normalizedFullName)) {
-    result = await runUpdateByIdentity();
-  }
-
-  const resolvedUser = await query(
-    "select user_key from dim_user where user_key = $1 or lower(trim(email)) = $2 or lower(trim(full_name)) = $3",
-    [normalizedUserKey, normalizedEmail, normalizedFullName]
-  );
-  if (!resolvedUser.rowCount) return null;
   try {
     await writeAudit({
       tableName: "dim_user",
-      recordId: userKey,
+      recordId: effectiveUserKey,
       actionType: "set_password",
       changedBy,
       oldValue: "",
