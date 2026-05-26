@@ -94,7 +94,9 @@
     <script>
       (function () {
         var path = window.location.pathname || "/";
-        var hasMwangazaPrefix = path.toLowerCase().indexOf("/mwangazamail/") === 0;
+        var lowerPath = path.toLowerCase();
+        var hasMwangazaPrefix = lowerPath.indexOf("/mwangazamail/") === 0;
+        var isAdminPath = lowerPath.indexOf("/mwangazamail/admin/") === 0;
         var target = hasMwangazaPrefix ? "/MwangazaMail/" : "/";
 
         var link = document.getElementById("manualLink");
@@ -102,9 +104,12 @@
           link.setAttribute("href", target);
         }
 
-        window.setTimeout(function () {
-          window.location.replace(target);
-        }, 250);
+        // Immediate reroute for protected/unknown paths.
+        if (isAdminPath) {
+          window.location.replace("/MwangazaMail/");
+          return;
+        }
+        window.location.replace(target);
       })();
     </script>
   </body>
