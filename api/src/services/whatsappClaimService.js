@@ -4,6 +4,11 @@ import { writeAudit } from "./auditService.js";
 
 const VALID_SEVERITIES = new Set(["faible", "moyen", "eleve", "critique"]);
 const DEFAULT_STATUS = "nouveau";
+const SESSION_TABLE_NAME = "whatsapp_session";
+const SESSION_ACTION_TYPE = "state";
+const SESSION_VERSION = 1;
+const MAX_OFF_TOPIC_WARNINGS = 2;
+const REQUIRED_FIELDS = ["reporterReference", "institution", "city", "description"];
 
 function normalizeText(value, fallback) {
   const clean = String(value || "").trim();
@@ -16,6 +21,14 @@ function normalizeSeverity(value) {
     return clean;
   }
   return "moyen";
+}
+
+function normalizeReference(value) {
+  const clean = String(value || "").trim();
+  if (!clean) {
+    return "Non fourni";
+  }
+  return clean.slice(0, 120);
 }
 
 function dateKeyFromDate(date = new Date()) {
@@ -37,6 +50,86 @@ function parseJsonFromModelText(text) {
   } catch (_error) {
     return null;
   }
+}
+
+function buildDefaultSession(from) {
+  return {
+    version: SESSION_VERSION,
+    phone: from,
+    status: "active",
+    warnings: 0,
+    completed: false,
+    startedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    incidentDraft: {
+      reporterReference: "",
+      institution: "",
+      city: "",
+      description: "",
+      category: "",
+      severity: "moyen"
+    },
+    history: []
+  };
+}
+
+function addHistory(session, role, text) {
+  const trimmed = normalizeText(text, "").slice(0, 1200);
+  if (!trimmed) {
+    return;
+  }
+
+  session.history.push({ role, text: trimmed, at: new Date().toISOString() });
+  if (session.history.length > 20) {
+    session.history = session.history.slice(-20);
+  }
+}
+
+function sanitizeSession(session, from) {
+  if (!session || typeof session !== "object") {
+    return buildDefaultSession(from);
+  }
+
+  const safe = {
+    ...buildDefaultSession(from),
+    ...session,
+    phone: from,
+    warnings: Number(session.warnings || 0),
+    completed: Boolean(session.completed)
+  };
+
+  safe.incidentDraft = {
+    ...buildDefaultSession(from).incidentDraft,
+    ...(session.incidentDraft || {})
+  };
+
+  safe.history = Array.isArray(session.history) ? session.history.slice(-20) : [];
+  return safe;
+}
+
+function missingFieldsFromDraft(draft) {
+  return REQUIRED_FIELDS.filter((field) => !normalizeText(draft?.[field], ""));
+}
+
+function mergeDraft(baseDraft, patchDraft) {
+  const merged = {
+    ...baseDraft,
+    ...patchDraft
+  };
+
+  return {
+    reporterReference: normalizeReference(merged.reporterReference),
+    institution: normalizeText(merged.institution, ""),
+    city: normalizeText(merged.city, ""),
+    description: normalizeText(merged.description, ""),
+    category: normalizeText(merged.category, ""),
+    severity: normalizeSeverity(merged.severity)
+  };
+}
+
+function isRestartMessage(text) {
+  const clean = normalizeText(text, "").toLowerCase();
+  return ["restart", "reprendre", "nouveau", "start"].includes(clean);
 }
 
 async function ensureDateKey() {
@@ -199,6 +292,7 @@ async function saveClaimToRedshift({ from, messageId, messageText, claim }) {
       messageId,
       from,
       summary: claim.summary,
+      reporterReference: claim.reporterReference,
       rawText: messageText,
       claim
     })
@@ -214,6 +308,150 @@ async function saveClaimToRedshift({ from, messageId, messageText, claim }) {
   });
 
   return { incidentRef, incidentKey };
+}
+
+async function loadConversationSession(from) {
+  const found = await query(
+    `select new_value
+     from audit_trail
+     where table_name = $1
+       and action_type = $2
+       and record_id = $3
+     order by changed_at desc
+     limit 1`,
+    [SESSION_TABLE_NAME, SESSION_ACTION_TYPE, String(from)]
+  );
+
+  if (!found.rowCount) {
+    return buildDefaultSession(from);
+  }
+
+  const parsed = parseJsonFromModelText(found.rows[0].new_value || "");
+  return sanitizeSession(parsed, from);
+}
+
+async function saveConversationSession(from, session) {
+  const safeSession = sanitizeSession(session, from);
+  safeSession.updatedAt = new Date().toISOString();
+
+  await writeAudit({
+    tableName: SESSION_TABLE_NAME,
+    recordId: from,
+    actionType: SESSION_ACTION_TYPE,
+    changedBy: `whatsapp:${from}`,
+    oldValue: "",
+    newValue: JSON.stringify(safeSession)
+  });
+
+  return safeSession;
+}
+
+function fallbackBrainResponse({ messageText, session }) {
+  const draft = mergeDraft(session.incidentDraft, {
+    description: session.incidentDraft.description || messageText,
+    category: session.incidentDraft.category || "Autre",
+    severity: session.incidentDraft.severity || "moyen"
+  });
+  const missing = missingFieldsFromDraft(draft);
+
+  if (!missing.length) {
+    return {
+      isOnTopic: true,
+      shouldDiscontinue: false,
+      warningReason: "",
+      assistantMessage: "Merci. Je finalise votre signalement.",
+      extracted: draft,
+      missingFields: []
+    };
+  }
+
+  const nextField = missing[0];
+  const prompts = {
+    reporterReference: "Quel est votre numero de reference (si disponible) ?",
+    institution: "Quelle institution est concernee ?",
+    city: "Dans quelle ville l'incident a eu lieu ?",
+    description: "Merci de decrire precisement l'incident."
+  };
+
+  return {
+    isOnTopic: true,
+    shouldDiscontinue: false,
+    warningReason: "",
+    assistantMessage: prompts[nextField] || "Merci, pouvez-vous donner plus de details sur l'incident ?",
+    extracted: draft,
+    missingFields: missing
+  };
+}
+
+async function runConversationBrain({ messageText, session }) {
+  if (!config.openai.apiKey) {
+    return fallbackBrainResponse({ messageText, session });
+  }
+
+  const systemPrompt = [
+    "You are a WhatsApp incident intake assistant for fraud/claim cases.",
+    "You must stay strictly on incident collection.",
+    "If user message is outside incident reporting, set isOnTopic=false and provide warningReason.",
+    "Collect these required fields: reporterReference, institution, city, description.",
+    "Also infer category and severity (faible|moyen|eleve|critique) when possible.",
+    "Respond with JSON only and no markdown.",
+    "Schema:",
+    '{"isOnTopic":true,"shouldDiscontinue":false,"warningReason":"","assistantMessage":"","extracted":{"reporterReference":"","institution":"","city":"","description":"","category":"","severity":"moyen"},"missingFields":["reporterReference","institution","city","description"]}'
+  ].join("\n");
+
+  const userPayload = {
+    currentDraft: session.incidentDraft,
+    warningCount: session.warnings,
+    recentHistory: session.history.slice(-8),
+    userMessage: normalizeText(messageText, "")
+  };
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.openai.apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: config.openai.model,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: JSON.stringify(userPayload) }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI conversation brain failed: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content || "";
+  const parsed = parseJsonFromModelText(content);
+  if (!parsed) {
+    return fallbackBrainResponse({ messageText, session });
+  }
+
+  return {
+    isOnTopic: Boolean(parsed.isOnTopic),
+    shouldDiscontinue: Boolean(parsed.shouldDiscontinue),
+    warningReason: normalizeText(parsed.warningReason, ""),
+    assistantMessage: normalizeText(parsed.assistantMessage, "Merci. Continuez avec les details de l'incident."),
+    extracted: mergeDraft(session.incidentDraft, parsed.extracted || {}),
+    missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields : []
+  };
+}
+
+function buildCaseCompletedMessage(incidentRef) {
+  return [
+    "Merci. Votre signalement est enregistre.",
+    `Reference Mwangaza: ${incidentRef}`,
+    "Conservez cette reference pour le suivi.",
+    "Pour un nouveau cas, envoyez RESTART."
+  ].join("\n");
 }
 
 export function getIncomingTextMessages(body) {
@@ -260,7 +498,90 @@ export async function wasMessageAlreadyProcessed(messageId) {
 }
 
 export async function processClaimMessage(message) {
-  const claim = await extractClaimWithOpenAI(message.text || "");
+  const text = normalizeText(message.text, "");
+  let session = await loadConversationSession(message.from);
+
+  if (session.status === "blocked" && !isRestartMessage(text)) {
+    return {
+      referenceNumber: "SESSION-BLOCKED",
+      responseText: "Cette conversation a ete interrompue pour hors-sujet. Envoyez RESTART pour declarer un incident.",
+      claim: null
+    };
+  }
+
+  if (isRestartMessage(text)) {
+    session = buildDefaultSession(message.from);
+    addHistory(session, "assistant", "Session redemarree");
+    await saveConversationSession(message.from, session);
+
+    return {
+      referenceNumber: "SESSION-RESTARTED",
+      responseText: "Session redemarree. Donnez votre numero de reference (si disponible), l'institution, la ville et la description de l'incident.",
+      claim: null
+    };
+  }
+
+  addHistory(session, "user", text);
+
+  const brain = await runConversationBrain({ messageText: text, session });
+  session.incidentDraft = mergeDraft(session.incidentDraft, brain.extracted || {});
+
+  if (!brain.isOnTopic || brain.shouldDiscontinue) {
+    session.warnings += 1;
+
+    if (session.warnings >= MAX_OFF_TOPIC_WARNINGS) {
+      session.status = "blocked";
+      addHistory(session, "assistant", "Conversation interrompue apres hors-sujet.");
+      await saveConversationSession(message.from, session);
+
+      return {
+        referenceNumber: "SESSION-DISCONTINUED",
+        responseText: "Avertissement: cette conversation est reservee a la declaration d'incidents. Discussion interrompue. Envoyez RESTART pour recommencer.",
+        claim: null
+      };
+    }
+
+    const warningText = brain.warningReason
+      ? `Avertissement: ${brain.warningReason}`
+      : "Avertissement: restons sur la declaration d'incident uniquement.";
+
+    const responseText = `${warningText}\nVeuillez fournir les details du cas: reference, institution, ville, description.`;
+    addHistory(session, "assistant", responseText);
+    await saveConversationSession(message.from, session);
+
+    return {
+      referenceNumber: "SESSION-WARNED",
+      responseText,
+      claim: null
+    };
+  }
+
+  const missing = missingFieldsFromDraft(session.incidentDraft);
+  if (missing.length) {
+    const followUp = normalizeText(
+      brain.assistantMessage,
+      "Merci. Pouvez-vous completer les informations manquantes ?"
+    );
+
+    addHistory(session, "assistant", followUp);
+    await saveConversationSession(message.from, session);
+
+    return {
+      referenceNumber: "SESSION-IN-PROGRESS",
+      responseText: followUp,
+      claim: null
+    };
+  }
+
+  const claim = {
+    category: normalizeText(session.incidentDraft.category, "Autre"),
+    institution: normalizeText(session.incidentDraft.institution, "WhatsApp Intake"),
+    city: normalizeText(session.incidentDraft.city, "Kinshasa"),
+    severity: normalizeSeverity(session.incidentDraft.severity),
+    summary: normalizeText(session.incidentDraft.description, text),
+    reporterReference: normalizeReference(session.incidentDraft.reporterReference)
+  };
+
   const { incidentRef } = await saveClaimToRedshift({
     from: message.from,
     messageId: message.messageId,
@@ -268,13 +589,12 @@ export async function processClaimMessage(message) {
     claim
   });
 
-  const responseText = [
-    "Merci. Votre signalement a bien ete recu.",
-    `Reference: ${incidentRef}`,
-    "Conservez cette reference pour le suivi."
-  ].join("\n");
+  session.status = "completed";
+  session.completed = true;
+  addHistory(session, "assistant", `Cas enregistre sous ${incidentRef}`);
+  await saveConversationSession(message.from, session);
 
-  return { referenceNumber: incidentRef, responseText, claim };
+  return { referenceNumber: incidentRef, responseText: buildCaseCompletedMessage(incidentRef), claim };
 }
 
 export async function sendWhatsAppText(to, bodyText) {

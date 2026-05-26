@@ -121,11 +121,19 @@ The API now supports WhatsApp Business incoming chat intake:
 Processing flow:
 
 1. Receive incoming WhatsApp text message
-2. Extract structured claim fields using OpenAI
-3. Generate a unique reference number (`WM-YYYYMMDD-XXXXXX`)
-4. Save claim into Redshift `fact_incident`
-5. Log governance records in `audit_trail`
-6. Reply to WhatsApp with the generated reference number
+2. Keep a per-phone conversation session (stored in `audit_trail`) to collect all required details
+3. OpenAI drives follow-up questions until required fields are complete: reporter reference, institution, city, description
+4. OpenAI classifies/category + severity suggestion for the completed incident
+5. Generate a unique reference number (`WM-YYYYMMDD-XXXXXX`)
+6. Save claim into Redshift `fact_incident`
+7. Log governance records in `audit_trail`
+8. Reply to WhatsApp with the generated reference number
+
+Conversation guardrails:
+
+- The assistant is restricted to incident intake only.
+- Off-topic messages trigger warnings.
+- After repeated off-topic attempts, chat is discontinued and user must send `RESTART`.
 
 Required environment variables in `api/.env`:
 

@@ -1,16 +1,23 @@
 import { Router } from "express";
 import {
   createUser,
+  ensurePasswordColumn,
   getAnalyticsSummary,
   getIncidents,
   getSeoEvents,
   getSubscriptions,
   getUsers,
   logAccessEvent,
+  loginUser,
+  setUserPassword,
   updateIncident,
   updateUser
 } from "../services/adminService.js";
 import { listAudit } from "../services/auditService.js";
+import { config } from "../config.js";
+
+// Ensure dim_user has password_hash column (idempotent migration).
+ensurePasswordColumn().catch((err) => console.error("ensurePasswordColumn:", err));
 
 const router = Router();
 
@@ -104,6 +111,72 @@ router.post("/track-access", async (req, res, next) => {
 router.get("/audit-trail", async (req, res, next) => {
   try {
     res.json(await listAudit(Number(req.query.limit || 200)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email) return res.status(400).json({ message: "Email requis" });
+    const user = await loginUser(String(email), String(password || ""));
+    if (!user) return res.status(401).json({ message: "Identifiants invalides" });
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put("/users/:userKey/set-password", async (req, res, next) => {
+  try {
+    const { password } = req.body || {};
+    const result = await setUserPassword(
+      req.params.userKey,
+      password,
+      req.header("x-user-email") || "admin@mwangaza.cd"
+    );
+    if (!result) return res.status(404).json({ message: "Utilisateur introuvable" });
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/ai-analyse", async (req, res, next) => {
+  try {
+    const { question, context } = req.body || {};
+    if (!question?.trim()) return res.status(400).json({ message: "Question requise" });
+
+    const systemPrompt =
+      `Tu es un analyste expert de la plateforme MwangazaMail qui analyse des donnees d'incidents ` +
+      `de gouvernance en RDC. Reponds toujours en francais, de facon concise et precise.\n` +
+      `Donnees actuelles du dashboard : ${JSON.stringify(context || {})}`;
+
+    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.openai.apiKey}`
+      },
+      body: JSON.stringify({
+        model: config.openai.model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: question.trim() }
+        ],
+        max_tokens: 600
+      })
+    });
+
+    if (!openAiResponse.ok) {
+      const errText = await openAiResponse.text();
+      throw new Error(`OpenAI error ${openAiResponse.status}: ${errText}`);
+    }
+
+    const data = await openAiResponse.json();
+    const answer = data.choices?.[0]?.message?.content || "Aucune reponse disponible.";
+    res.json({ answer });
   } catch (error) {
     next(error);
   }

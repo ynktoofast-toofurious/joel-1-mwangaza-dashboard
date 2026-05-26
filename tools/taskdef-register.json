@@ -1,0 +1,104 @@
+﻿{
+    "executionRoleArn":  "arn:aws:iam::779846821543:role/ecsTaskExecutionRole",
+    "networkMode":  "awsvpc",
+    "cpu":  "512",
+    "requiresCompatibilities":  [
+                                    "FARGATE"
+                                ],
+    "containerDefinitions":  [
+                                 {
+                                     "name":  "api",
+                                     "image":  "779846821543.dkr.ecr.us-east-1.amazonaws.com/mwangaza-api:20260525214246",
+                                     "cpu":  0,
+                                     "portMappings":  [
+                                                          {
+                                                              "containerPort":  4000,
+                                                              "hostPort":  4000,
+                                                              "protocol":  "tcp"
+                                                          }
+                                                      ],
+                                     "essential":  true,
+                                     "environment":  [
+
+                                                     ],
+                                     "mountPoints":  [
+
+                                                     ],
+                                     "volumesFrom":  [
+
+                                                     ],
+                                     "secrets":  [
+                                                     {
+                                                         "name":  "REDSHIFT_HOST",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:REDSHIFT_HOST::"
+                                                     },
+                                                     {
+                                                         "name":  "REDSHIFT_PORT",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:REDSHIFT_PORT::"
+                                                     },
+                                                     {
+                                                         "name":  "REDSHIFT_DB",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:REDSHIFT_DB::"
+                                                     },
+                                                     {
+                                                         "name":  "REDSHIFT_USER",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:REDSHIFT_USER::"
+                                                     },
+                                                     {
+                                                         "name":  "REDSHIFT_PASSWORD",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:REDSHIFT_PASSWORD::"
+                                                     },
+                                                     {
+                                                         "name":  "REDSHIFT_SCHEMA",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:REDSHIFT_SCHEMA::"
+                                                     },
+                                                     {
+                                                         "name":  "REDSHIFT_SSL",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:REDSHIFT_SSL::"
+                                                     },
+                                                     {
+                                                         "name":  "PUBLIC_BASE_URL",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:PUBLIC_BASE_URL::"
+                                                     },
+                                                     {
+                                                         "name":  "WHATSAPP_VERIFY_TOKEN",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:WHATSAPP_VERIFY_TOKEN::"
+                                                     },
+                                                     {
+                                                         "name":  "WHATSAPP_ACCESS_TOKEN",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:WHATSAPP_ACCESS_TOKEN::"
+                                                     },
+                                                     {
+                                                         "name":  "WHATSAPP_PHONE_NUMBER_ID",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:WHATSAPP_PHONE_NUMBER_ID::"
+                                                     },
+                                                     {
+                                                         "name":  "WHATSAPP_GRAPH_VERSION",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:WHATSAPP_GRAPH_VERSION::"
+                                                     },
+                                                     {
+                                                         "name":  "OPENAI_API_KEY",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:OPENAI_API_KEY::"
+                                                     },
+                                                     {
+                                                         "name":  "OPENAI_MODEL",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:779846821543:secret:mwangaza/api/prod-9JnPuE:OPENAI_MODEL::"
+                                                     }
+                                                 ],
+                                     "logConfiguration":  {
+                                                              "logDriver":  "awslogs",
+                                                              "options":  {
+                                                                              "awslogs-group":  "/ecs/mwangaza-api",
+                                                                              "awslogs-region":  "us-east-1",
+                                                                              "awslogs-stream-prefix":  "ecs"
+                                                                          }
+                                                          },
+                                     "systemControls":  [
+
+                                                        ]
+                                 }
+                             ],
+    "family":  "mwangaza-api-task",
+    "taskRoleArn":  "arn:aws:iam::779846821543:role/mwangazaApiTaskRole",
+    "memory":  "1024"
+}

@@ -327,7 +327,7 @@ function LoginPortal({ isOpen, onClose, onSubmit }) {
             onSubmit=${(event) => {
               event.preventDefault();
               if (!email.trim() || !password.trim()) return;
-              onSubmit();
+              onSubmit({ email: email.trim(), password: password.trim() });
             }}
           >
             <label htmlFor="portal-email">Email</label>
@@ -460,7 +460,32 @@ function App() {
     trackAccess(window.location.pathname || "/");
   }, []);
 
-  const goToAdmin = () => {
+  const goToAdmin = async ({ email, password } = {}) => {
+    if (email) {
+      for (const base of apiCandidates) {
+        try {
+          const r = await fetch(`${base}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+          });
+          if (r.ok) {
+            const user = await r.json();
+            localStorage.setItem(AUTH_KEY, "true");
+            localStorage.setItem("mwangaza_user", JSON.stringify({ name: user.full_name, email: user.email, role: user.role }));
+            window.location.assign(adminUrl);
+            return;
+          }
+          if (r.status === 401) {
+            alert("Email ou mot de passe incorrect.");
+            return;
+          }
+        } catch (_err) {
+          // Try next candidate.
+        }
+      }
+    }
+    // API unreachable → sandbox fallback (no name stored).
     localStorage.setItem(AUTH_KEY, "true");
     window.location.assign(adminUrl);
   };

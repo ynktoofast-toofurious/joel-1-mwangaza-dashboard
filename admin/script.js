@@ -200,6 +200,63 @@ function closeUserDrawer() {
   state.userEditKey = null;
 }
 
+function showGreeting() {
+  try {
+    const stored = localStorage.getItem("mwangaza_user");
+    if (!stored) return;
+    const { name } = JSON.parse(stored);
+    const el = document.getElementById("userGreeting");
+    if (el && name) el.textContent = `Bonjour, ${name}`;
+  } catch (_err) {
+    // Silent — greeting is non-critical.
+  }
+}
+
+function openAiModal() {
+  document.getElementById("aiBackdrop").hidden = false;
+  const modal = document.getElementById("aiModal");
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  document.getElementById("aiAnswer").hidden = true;
+  document.getElementById("aiAnswer").textContent = "";
+}
+
+function closeAiModal() {
+  document.getElementById("aiBackdrop").hidden = true;
+  const modal = document.getElementById("aiModal");
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+async function sendAiQuestion() {
+  const questionEl = document.getElementById("aiQuestion");
+  const question = questionEl?.value?.trim();
+  if (!question) return;
+  const btn = document.getElementById("sendAiBtn");
+  btn.disabled = true;
+  btn.textContent = "Analyse en cours…";
+  const context = {
+    incidents: state.incidents.slice(0, 50),
+    subscriptions: state.subscriptions,
+    analytics: state.analytics
+  };
+  try {
+    const data = await fetchJson("/ai-analyse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, context })
+    });
+    const answerEl = document.getElementById("aiAnswer");
+    answerEl.textContent = data.answer || "Aucune reponse.";
+    answerEl.hidden = false;
+  } catch (_err) {
+    alert("Service IA indisponible. Verifiez que l'API est en ligne.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Analyser →";
+  }
+}
+
 function openConfirmModal(message, action) {
   const modal = document.getElementById("confirmModal");
   const backdrop = document.getElementById("confirmBackdrop");
@@ -235,6 +292,16 @@ async function saveUserDraft() {
       },
       body: JSON.stringify(payload)
     });
+    // If a password was provided and we know the user key, set it separately.
+    const pw = state.userDraft.password;
+    const resolvedKey = userKey || null;
+    if (pw && resolvedKey) {
+      await fetchJson(`/users/${resolvedKey}/set-password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-user-email": "admin@mwangaza.cd" },
+        body: JSON.stringify({ password: pw })
+      }).catch(() => {/* non-fatal */});
+    }
     closeConfirmModal();
     closeUserDrawer();
     await loadUsers();
@@ -533,8 +600,12 @@ function registerEvents() {
   document.getElementById("addUserBtn")?.addEventListener("click", () => openUserDrawer("add"));
   document.getElementById("openUserDrawerBtn")?.addEventListener("click", () => {
     switchTab("utilisateurs");
-    openUserDrawer("add");
   });
+
+  document.getElementById("analyseIaBtn")?.addEventListener("click", openAiModal);
+  document.getElementById("closeAiModalBtn")?.addEventListener("click", closeAiModal);
+  document.getElementById("aiBackdrop")?.addEventListener("click", closeAiModal);
+  document.getElementById("sendAiBtn")?.addEventListener("click", sendAiQuestion);
 
   document.getElementById("usersRows")?.addEventListener("click", (event) => {
     const button = event.target.closest(".edit-user");
@@ -556,6 +627,7 @@ function registerEvents() {
       email: form.email.value.trim(),
       role: form.role.value,
       city: form.city.value.trim(),
+      password: form.password?.value?.trim() || "",
       originalEmail: form.dataset.originalEmail || ""
     };
     if (!payload.fullName || !payload.email || !payload.role || !payload.city) {
@@ -608,6 +680,7 @@ function switchTab(tab) {
 }
 
 async function bootstrap() {
+  showGreeting();
   registerEvents();
   renderFeatures();
   await Promise.all([loadIncidents(), loadUsers(), loadSubscriptions(), loadAnalytics()]);

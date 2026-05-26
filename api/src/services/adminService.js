@@ -1,5 +1,63 @@
+import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { query } from "../db.js";
 import { writeAudit } from "./auditService.js";
+
+export async function ensurePasswordColumn() {
+  try {
+    const exists = await query(
+      `select column_name from information_schema.columns
+       where table_name = 'dim_user' and column_name = 'password_hash'`,
+      []
+    );
+    if (!exists.rowCount) {
+      await query("alter table dim_user add column password_hash varchar(200)", []);
+    }
+  } catch (_err) {
+    // Column may already exist — safe to ignore.
+  }
+}
+
+export async function loginUser(email, password) {
+  const result = await query(
+    `select user_key, full_name, email, role_name as role, password_hash
+     from dim_user where email = $1`,
+    [String(email).trim().toLowerCase()]
+  );
+  if (!result.rowCount) return null;
+  const user = result.rows[0];
+  // No password set yet → allow login (transition period).
+  if (!user.password_hash) return { full_name: user.full_name, email: user.email, role: user.role };
+  if (!password || !password.trim()) return null;
+  try {
+    const [salt, hash] = user.password_hash.split(":");
+    const match = timingSafeEqual(Buffer.from(hash, "hex"), scryptSync(password, salt, 64));
+    return match ? { full_name: user.full_name, email: user.email, role: user.role } : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+export async function setUserPassword(userKey, password, changedBy) {
+  if (!password || String(password).length < 6) {
+    throw new Error("Le mot de passe doit contenir au moins 6 caracteres");
+  }
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+  const result = await query(
+    "update dim_user set password_hash = $1 where user_key = $2 returning user_key",
+    [`${salt}:${hash}`, Number(userKey)]
+  );
+  if (!result.rowCount) return null;
+  await writeAudit({
+    tableName: "dim_user",
+    recordId: userKey,
+    actionType: "set_password",
+    changedBy,
+    oldValue: "",
+    newValue: "password_updated"
+  });
+  return true;
+}
 
 function buildWhere(filters, params) {
   const where = [];

@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260525-4" />
+    <link rel="stylesheet" href="styles.css?v=20260525-5" />
   </head>
   <body>
     <script>
@@ -45,7 +45,8 @@
             <span class="route-pill" id="routePill">/admin/dashboard</span>
           </div>
           <div class="topbar-right">
-            <button class="ghost-btn" type="button">Analyse IA</button>
+            <span class="user-greeting" id="userGreeting"></span>
+            <button class="ghost-btn" id="analyseIaBtn" type="button">Analyse IA</button>
             <button class="primary-btn" id="openUserDrawerBtn" type="button">Gerer les utilisateurs →</button>
           </div>
         </header>
@@ -209,6 +210,11 @@
           Ville
           <input id="userFormCity" name="city" required maxlength="80" />
         </label>
+        <label>
+          Mot de passe <span class="label-optional">(optionnel)</span>
+          <input id="userFormPassword" name="password" type="password" maxlength="200"
+                 placeholder="Laisser vide pour ne pas modifier" autocomplete="new-password" />
+        </label>
         <div class="drawer-actions">
           <button id="cancelUserFormBtn" class="ghost-btn" type="button">Annuler</button>
           <button id="submitUserFormBtn" class="primary-btn" type="submit">Sauvegarder</button>
@@ -226,6 +232,21 @@
       </div>
     </section>
 
-    <script src="script.js?v=20260525-4"></script>
+    <div class="confirm-backdrop" id="aiBackdrop" hidden></div>
+    <section class="confirm-modal ai-modal" id="aiModal" aria-hidden="true" role="dialog" aria-labelledby="aiModalTitle">
+      <div class="ai-modal-header">
+        <h3 id="aiModalTitle">Analyse IA</h3>
+        <button id="closeAiModalBtn" class="icon-btn" type="button" aria-label="Fermer">✕</button>
+      </div>
+      <p class="ai-modal-hint">Posez une question sur les donnees du dashboard (incidents, abonnements, analytics).</p>
+      <textarea id="aiQuestion" rows="3"
+        placeholder="Ex: Quelles villes ont le plus d'incidents critiques ?"></textarea>
+      <div class="ai-modal-actions">
+        <button id="sendAiBtn" class="primary-btn" type="button">Analyser →</button>
+      </div>
+      <div id="aiAnswer" class="ai-answer" hidden></div>
+    </section>
+
+    <script src="script.js?v=20260525-5"></script>
   </body>
 </html>
