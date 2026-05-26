@@ -139,7 +139,9 @@ router.put("/users/:userKey/set-password", async (req, res, next) => {
     if (!result) return res.status(404).json({ message: "Utilisateur introuvable" });
     res.json({ ok: true });
   } catch (error) {
-    next(error);
+    const message = error?.message || "Impossible de mettre a jour le mot de passe";
+    const status = String(message).includes("au moins 6 caracteres") ? 400 : 500;
+    res.status(status).json({ message });
   }
 });
 

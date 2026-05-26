@@ -43,19 +43,36 @@ export async function setUserPassword(userKey, password, changedBy) {
   }
   const salt = randomBytes(16).toString("hex");
   const hash = scryptSync(password, salt, 64).toString("hex");
-  const result = await query(
-    "update dim_user set password_hash = $1 where user_key = $2 returning user_key",
-    [`${salt}:${hash}`, Number(userKey)]
-  );
+
+  const runUpdate = () =>
+    query("update dim_user set password_hash = $1 where user_key = $2 returning user_key", [`${salt}:${hash}`, Number(userKey)]);
+
+  let result;
+  try {
+    result = await runUpdate();
+  } catch (error) {
+    const message = String(error?.message || "").toLowerCase();
+    if (message.includes("password_hash") || message.includes("column") || message.includes("does not exist")) {
+      await ensurePasswordColumn();
+      result = await runUpdate();
+    } else {
+      throw error;
+    }
+  }
+
   if (!result.rowCount) return null;
-  await writeAudit({
-    tableName: "dim_user",
-    recordId: userKey,
-    actionType: "set_password",
-    changedBy,
-    oldValue: "",
-    newValue: "password_updated"
-  });
+  try {
+    await writeAudit({
+      tableName: "dim_user",
+      recordId: userKey,
+      actionType: "set_password",
+      changedBy,
+      oldValue: "",
+      newValue: "password_updated"
+    });
+  } catch (_auditErr) {
+    // Non-blocking: password is already updated.
+  }
   return true;
 }
 
