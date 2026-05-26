@@ -534,7 +534,10 @@ async function saveUserDraft() {
     await loadSeoTab();
   } catch (_error) {
     closeConfirmModal();
-    alert("Sauvegarde impossible: API Redshift hors ligne. Aucun changement n'a ete persiste.");
+    const rawMessage = String(_error?.message || "").trim();
+    const genericMessage = "Sauvegarde impossible. Aucun changement n'a ete persiste.";
+    const safeMessage = rawMessage && !/^HTTP\s\d+/i.test(rawMessage) ? `${genericMessage} ${rawMessage}` : genericMessage;
+    alert(safeMessage);
   } finally {
     state.userDraft = null;
   }
