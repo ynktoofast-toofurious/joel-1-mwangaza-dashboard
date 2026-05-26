@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MwangazaMail | Redirecting</title>
+    <style>
+      :root {
+        --bg: #f3f5fb;
+        --card: #ffffff;
+        --text: #1d2540;
+        --muted: #5f6783;
+        --accent: #6b38db;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Plus Jakarta Sans", "Segoe UI", Tahoma, sans-serif;
+        background: radial-gradient(circle at top right, #ece9ff 0%, var(--bg) 45%);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .card {
+        width: min(560px, 100%);
+        background: var(--card);
+        border: 1px solid #e3e8f3;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 18px 60px rgba(35, 43, 77, 0.12);
+        text-align: center;
+      }
+
+      .brand {
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        color: var(--accent);
+        margin: 0 0 10px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(26px, 4vw, 36px);
+      }
+
+      p {
+        color: var(--muted);
+        line-height: 1.6;
+        margin: 12px 0 0;
+      }
+
+      .loading {
+        margin: 18px auto 0;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 3px solid #d9dff0;
+        border-top-color: var(--accent);
+        animation: spin 0.85s linear infinite;
+      }
+
+      a {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card" role="main">
+      <p class="brand">MwangazaMail</p>
+      <h1>Redirecting to secure landing...</h1>
+      <p>
+        This address is not available. You are being redirected to the main landing page.
+        <br />
+        If redirect does not start, <a id="manualLink" href="/">click here</a>.
+      </p>
+      <div class="loading" aria-hidden="true"></div>
+    </main>
+
+    <script>
+      (function () {
+        var path = window.location.pathname || "/";
+        var hasMwangazaPrefix = path.toLowerCase().indexOf("/mwangazamail/") === 0;
+        var target = hasMwangazaPrefix ? "/MwangazaMail/" : "/";
+
+        var link = document.getElementById("manualLink");
+        if (link) {
+          link.setAttribute("href", target);
+        }
+
+        window.setTimeout(function () {
+          window.location.replace(target);
+        }, 250);
+      })();
+    </script>
+  </body>
+</html>
