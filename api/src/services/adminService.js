@@ -44,8 +44,10 @@ export async function setUserPassword(userKey, password, changedBy) {
   const salt = randomBytes(16).toString("hex");
   const hash = scryptSync(password, salt, 64).toString("hex");
 
+  const normalizedUserKey = String(userKey).trim();
+
   const runUpdate = () =>
-    query("update dim_user set password_hash = $1 where user_key = $2", [`${salt}:${hash}`, Number(userKey)]);
+    query("update dim_user set password_hash = $1 where user_key = $2", [`${salt}:${hash}`, normalizedUserKey]);
 
   let result;
   try {
@@ -60,7 +62,7 @@ export async function setUserPassword(userKey, password, changedBy) {
     }
   }
 
-  const resolvedUser = await query("select user_key from dim_user where user_key = $1", [Number(userKey)]);
+  const resolvedUser = await query("select user_key from dim_user where user_key = $1", [normalizedUserKey]);
   if (!resolvedUser.rowCount) return null;
   try {
     await writeAudit({
