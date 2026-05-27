@@ -62,7 +62,8 @@ const sectionMeta = {
   abonnements: ["Abonnements", "Suivi des plans et renouvellements", "/admin/abonnements"],
   analytics: ["Analytics", "Analyse des performances et tendances", "/admin/analytics"],
   fonctionnalites: ["Fonctionnalites", "Activation des modules metier", "/admin/fonctionnalites"],
-  seo: ["SEO & Audit", "Trafic, acces, geolocalisation et historique des revisions", "/admin/seo"]
+  seo: ["SEO & Audit", "Trafic, acces, geolocalisation et historique des revisions", "/admin/seo"],
+  whatsapp: ["Messages WhatsApp", "Conversations recues et signalements crees via WhatsApp", "/admin/whatsapp"]
 };
 
 const severityOptions = ["faible", "moyen", "eleve", "critique"];
@@ -819,6 +820,45 @@ async function loadSeoTab() {
   renderSeo(state.seo, state.audit);
 }
 
+async function loadWhatsappTab() {
+  try {
+    const rows = await fetchJson("/whatsapp-messages");
+    renderWhatsapp(rows);
+  } catch (_error) {
+    fillRows("waRows", `<tr><td colspan="5" style="text-align:center;color:#aaa">Impossible de charger les messages. API hors ligne ou credentials WhatsApp manquants.</td></tr>`);
+  }
+}
+
+function renderWhatsapp(rows) {
+  const received = rows.filter((r) => r.actionType === "received");
+  const sent = rows.filter((r) => r.actionType === "sent");
+  const withRef = received.filter((r) => r.incidentRef);
+  const unique = new Set(received.map((r) => r.from || r.sender)).size;
+
+  document.getElementById("waMsgCount").textContent = String(received.length);
+  document.getElementById("waUniqueCount").textContent = String(unique);
+  document.getElementById("waSentCount").textContent = String(sent.length);
+  document.getElementById("waCompletedCount").textContent = String(withRef.length);
+
+  if (!rows.length) {
+    fillRows("waRows", `<tr><td colspan="5" style="text-align:center;color:#aaa">Aucun message WhatsApp enregistre pour l'instant.</td></tr>`);
+    return;
+  }
+
+  fillRows(
+    "waRows",
+    rows.map((r) => `
+      <tr>
+        <td>${new Date(r.time).toLocaleString()}</td>
+        <td>${r.from || r.sender || "-"}</td>
+        <td title="${(r.rawText || "").replace(/"/g, "&quot;")}">${(r.rawText || "-").slice(0, 80)}</td>
+        <td>${r.incidentRef ? `<code>${r.incidentRef}</code>` : "<span style='color:#aaa'>-</span>"}</td>
+        <td><span class="badge ${r.incidentRef ? 'badge-green' : 'badge-grey'}">${r.incidentRef ? 'Cree' : r.actionType}</span></td>
+      </tr>
+    `).join("")
+  );
+}
+
 async function logPageAccess(route) {
   try {
     await fetchJson("/track-access", {
@@ -915,7 +955,8 @@ const sections = {
   abonnements: document.getElementById("abonnementsSection"),
   analytics: document.getElementById("analyticsSection"),
   fonctionnalites: document.getElementById("fonctionnalitesSection"),
-  seo: document.getElementById("seoSection")
+  seo: document.getElementById("seoSection"),
+  whatsapp: document.getElementById("whatsappSection")
 };
 
 const title = document.getElementById("sectionTitle");
@@ -935,6 +976,7 @@ function switchTab(tab) {
   logPageAccess(route);
 
   if (tab === "seo") loadSeoTab();
+  if (tab === "whatsapp") loadWhatsappTab();
 }
 
 async function bootstrap() {
@@ -958,8 +1000,11 @@ document.getElementById("refreshBtn")?.addEventListener("click", () => {
   if (tab === "abonnements") loadSubscriptions();
   if (tab === "analytics") loadAnalytics();
   if (tab === "seo") loadSeoTab();
+  if (tab === "whatsapp") loadWhatsappTab();
   switchTab(tab);
 });
+
+document.getElementById("refreshWaBtn")?.addEventListener("click", loadWhatsappTab);
 
 document.getElementById("logoutBtn")?.addEventListener("click", () => {
   localStorage.removeItem("mwangaza_auth");

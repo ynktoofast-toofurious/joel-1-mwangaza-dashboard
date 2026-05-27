@@ -147,6 +147,35 @@ router.put("/users/:userKey/set-password", async (req, res, next) => {
   }
 });
 
+router.get("/whatsapp-messages", async (req, res, next) => {
+  try {
+    const limit = Math.min(Number(req.query.limit || 200), 500);
+    const result = await query(
+      `select changed_at, changed_by as sender, new_value, action_type
+       from audit_trail
+       where table_name in ('whatsapp_message', 'whatsapp_session')
+       order by changed_at desc
+       limit $1`,
+      [limit]
+    );
+    const rows = (result.rows || []).map((r) => {
+      let parsed = {};
+      try { parsed = JSON.parse(r.new_value || "{}"); } catch (_) {}
+      return {
+        time: r.changed_at,
+        sender: r.sender,
+        actionType: r.action_type,
+        incidentRef: parsed.incidentRef || "",
+        rawText: parsed.rawText || parsed.text || "",
+        from: parsed.from || r.sender
+      };
+    });
+    res.json(rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/ai-analyse", async (req, res, next) => {
   try {
     const { question, context, messages } = req.body || {};

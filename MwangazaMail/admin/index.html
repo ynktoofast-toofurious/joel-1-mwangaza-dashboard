@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260525-8" />
+    <link rel="stylesheet" href="styles.css?v=20260526-1" />
   </head>
   <body>
     <script>
@@ -33,6 +33,7 @@
           <button class="nav-item" data-tab="analytics" type="button">Analytics</button>
           <button class="nav-item" data-tab="fonctionnalites" type="button">Fonctionnalites</button>
           <button class="nav-item" data-tab="seo" type="button">SEO</button>
+          <button class="nav-item" data-tab="whatsapp" type="button">💬 Messages</button>
         </nav>
 
         <button class="logout-btn" id="logoutBtn" type="button">Deconnexion</button>
@@ -178,6 +179,27 @@
           </section>
         </section>
 
+        <section id="whatsappSection" class="tab-section">
+          <section class="stats-grid">
+            <article class="stat-card"><p class="stat-value" id="waMsgCount">—</p><p class="stat-label">Messages recus</p></article>
+            <article class="stat-card"><p class="stat-value" id="waUniqueCount">—</p><p class="stat-label">Expediteurs uniques</p></article>
+            <article class="stat-card"><p class="stat-value" id="waSentCount">—</p><p class="stat-label">Reponses envoyees</p></article>
+            <article class="stat-card"><p class="stat-value" id="waCompletedCount">—</p><p class="stat-label">Signalements crees</p></article>
+          </section>
+          <section class="panel-card table-card">
+            <div class="users-toolbar" style="margin-bottom:12px">
+              <h2 style="margin:0">Conversations WhatsApp</h2>
+              <button id="refreshWaBtn" class="ghost-btn" type="button">↻ Actualiser</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Heure</th><th>Expediteur</th><th>Message</th><th>Ref signalement</th><th>Statut</th></tr></thead>
+                <tbody id="waRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
         <footer class="powered-footer">
           <a href="https://ynk-techusa.com/" target="_blank" rel="noreferrer">Powered by YNK-Tech USA</a>
         </footer>
@@ -250,6 +272,6 @@
       </div>
     </section>
 
-    <script src="script.js?v=20260525-8"></script>
+    <script src="script.js?v=20260526-1"></script>
   </body>
 </html>
