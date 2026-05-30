@@ -551,7 +551,7 @@ function WaPhoneModal({ isOpen, onClose }) {
           </div>
 
           <div className="wa-header">
-            <button className="wa-close-btn" onClick=${onClose} aria-label="Fermer">&#8592;</button>
+            <button className="wa-close-btn" onClick=${onClose} aria-label="Fermer">←</button>
             <div className="wa-avatar" aria-hidden="true">M</div>
             <div className="wa-contact">
               <div className="wa-contact-name">Mwangaza Bot</div>
