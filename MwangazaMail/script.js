@@ -449,12 +449,172 @@ function CookieBanner({ visible, onAccept, onReject }) {
   `;
 }
 
+const WA_WEBCHAT_API = "https://api.mysmartwork.tech/api/whatsapp/webchat";
+const WA_WELCOME = "Bonjour ! 👋 Je suis le bot MwangazaMail.\n\nJe vous aide à déclarer un incident de corruption, fraude ou abus d'autorité de façon totalement anonyme.\n\nCommencez par me donner votre numéro de référence (ou tapez Aucun), puis l'institution concernée, la ville et une description de l'incident.";
+
+function WaPhoneModal({ isOpen, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [inputVal, setInputVal] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [greeted, setGreeted] = useState(false);
+  const [doneRef, setDoneRef] = useState("");
+  const chatRef = React.useRef(null);
+
+  const userId = React.useMemo(() => {
+    let uid = sessionStorage.getItem("mwm_wa_uid");
+    if (!uid) {
+      uid = Array.from(crypto.getRandomValues(new Uint8Array(12)))
+        .map(b => b.toString(36).padStart(2, "0")).join("").slice(0, 20);
+      sessionStorage.setItem("mwm_wa_uid", uid);
+    }
+    return uid;
+  }, []);
+
+  const scrollBottom = () => {
+    requestAnimationFrame(() => {
+      if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    });
+  };
+
+  const nowTime = () => {
+    const d = new Date();
+    return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+
+  const addMsg = (text, role, ref) => {
+    setMessages(prev => [...prev, { text, role, time: nowTime(), ref: ref || null }]);
+    scrollBottom();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (greeted) { scrollBottom(); return; }
+    setGreeted(true);
+    setBusy(true);
+    const t = setTimeout(() => {
+      addMsg(WA_WELCOME, "bot");
+      setBusy(false);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
+
+  const sendMsg = async (text) => {
+    if (busy || !text.trim() || done) return;
+    setBusy(true);
+    addMsg(text, "user");
+    setInputVal("");
+    try {
+      const resp = await fetch(WA_WEBCHAT_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, text: text.trim() })
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        addMsg("⚠️ Erreur: " + (data.message || "Problème de connexion."), "bot");
+      } else {
+        addMsg(data.responseText, "bot");
+        if (data.complete) {
+          setDone(true);
+          setDoneRef(data.referenceNumber);
+        }
+      }
+    } catch (_) {
+      addMsg("⚠️ Impossible de joindre le serveur. Vérifiez votre connexion.", "bot");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    html`
+      <div className="wa-backdrop" onClick=${(e) => e.target.classList.contains("wa-backdrop") && onClose()}>
+        <div className="wa-phone" role="dialog" aria-modal="true" aria-label="Signalement WhatsApp">
+          <div className="wa-notch" aria-hidden="true"></div>
+
+          <div className="wa-statusbar" aria-hidden="true">
+            <span className="wa-statusbar-time">${nowTime()}</span>
+            <span className="wa-statusbar-icons">
+              <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><rect x="0" y="6" width="3" height="5" rx="0.5"/><rect x="4" y="4" width="3" height="7" rx="0.5"/><rect x="8" y="2" width="3" height="9" rx="0.5"/><rect x="12" y="0" width="3" height="11" rx="0.5"/></svg>
+              <svg width="22" height="11" viewBox="0 0 22 11" fill="currentColor"><rect x="0" y="1" width="18" height="9" rx="2" stroke="currentColor" strokeWidth="1" fill="none"/><rect x="18.5" y="3.5" width="2" height="4" rx="1"/><rect x="1.5" y="2.5" width="13" height="6" rx="1.2"/></svg>
+            </span>
+          </div>
+
+          <div className="wa-header">
+            <button className="wa-close-btn" onClick=${onClose} aria-label="Fermer">&#8592;</button>
+            <div className="wa-avatar" aria-hidden="true">M</div>
+            <div className="wa-contact">
+              <div className="wa-contact-name">Mwangaza Bot</div>
+              <div className="wa-contact-status">${busy ? "En train d'écrire…" : "En ligne"}</div>
+            </div>
+          </div>
+
+          <div className="wa-chat" ref=${chatRef}>
+            <div className="wa-date">Aujourd'hui</div>
+            ${messages.map((m, i) => html`
+              <div key=${i} className=${`wa-msg wa-msg-${m.role}`}>
+                ${m.text}
+                <span className="wa-msg-time">${m.time}</span>
+              </div>
+            `)}
+            ${busy && html`
+              <div className="wa-typing">
+                <span></span><span></span><span></span>
+              </div>
+            `}
+            ${done && html`
+              <div className="wa-success">✅ Incident enregistré · Réf: ${doneRef}</div>
+            `}
+          </div>
+
+          <div className="wa-input-bar">
+            <textarea
+              className="wa-input"
+              placeholder="Tapez un message"
+              rows="1"
+              disabled=${busy || done}
+              value=${inputVal}
+              onInput=${(e) => setInputVal(e.target.value)}
+              onKeyDown=${(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMsg(inputVal);
+                }
+              }}
+            ></textarea>
+            <button
+              className="wa-send-btn"
+              disabled=${busy || !inputVal.trim() || done}
+              onClick=${() => sendMsg(inputVal)}
+              aria-label="Envoyer"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `,
+    document.body
+  );
+}
+
 function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [sandboxOpen, setSandboxOpen] = useState(true);
   const [sandboxBannerVisible, setSandboxBannerVisible] = useState(false);
   const [demoTab, setDemoTab] = useState("whatsapp");
   const [cookieVisible, setCookieVisible] = useState(localStorage.getItem(COOKIE_KEY) === null);
+  const [waOpen, setWaOpen] = useState(false);
 
   useEffect(() => {
     trackAccess(window.location.pathname || "/");
@@ -477,6 +637,7 @@ function App() {
 
   return html`
     <div className="landing-shell">
+      <${WaPhoneModal} isOpen=${waOpen} onClose=${() => setWaOpen(false)} />
       <${SandboxBanner} visible=${sandboxBannerVisible} onClose=${() => setSandboxBannerVisible(false)} />
       <header className="site-header">
         <a className="brand" href="#hero">
@@ -511,6 +672,10 @@ function App() {
             <div className="hero-actions hero-actions-large">
               <a className="btn btn-solid btn-large" href="#contact">Demander une demo gratuite →</a>
               <a className="btn btn-outline btn-large" href="#demo">Voir la demo</a>
+              <button className="btn btn-whatsapp btn-large wa-pulse" type="button" onClick=${() => setWaOpen(true)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                Tester le bot en direct
+              </button>
             </div>
             <ul className="security-points security-points-large">
               <li>Anonymat total</li>
