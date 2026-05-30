@@ -136,6 +136,17 @@ export async function getIncidents(filters = {}) {
       sev.severity_name as severity,
       st.status_name as status,
       dd.full_date as occurred_on,
+      fi.inserted_at as reported_at,
+      fi.ingestion_source,
+      (
+        select json_extract_path_text(at.new_value, 'from')
+        from audit_trail at
+        where at.table_name = 'fact_incident'
+          and at.action_type = 'create'
+          and json_extract_path_text(at.new_value, 'incidentRef') = fi.incident_ref
+        order by at.changed_at desc
+        limit 1
+      ) as reporter_phone,
       fi.description,
       fi.reporter_reference,
       fi.revision

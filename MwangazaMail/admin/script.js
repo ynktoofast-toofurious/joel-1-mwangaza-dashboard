@@ -300,6 +300,21 @@ function fillRows(id, html) {
 }
 
 function renderIncidents(rows) {
+  const formatSource = (value) => {
+    const clean = String(value || "").trim().toLowerCase();
+    if (!clean) return "-";
+    if (clean === "demo_ui") return "demo UI";
+    if (clean === "whatsapp_number") return "whatsapp number";
+    return clean.replace(/_/g, " ");
+  };
+
+  const formatTime = (value) => {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleString();
+  };
+
   fillRows(
     "reportRows",
     rows
@@ -310,6 +325,9 @@ function renderIncidents(rows) {
         <td><span class="tag ${tagClass[row.category] || "tag-gray"}">${row.category}</span></td>
         <td>${row.institution}</td>
         <td>${row.city}</td>
+        <td>${row.reporter_phone || "-"}</td>
+        <td>${formatSource(row.ingestion_source)}</td>
+        <td>${formatTime(row.reported_at)}</td>
         <td>
           <select class="revision-select" data-field="severity" data-key="${row.incident_key}">
             ${severityOptions.map((item) => `<option value="${item}" ${item === row.severity ? "selected" : ""}>${item}</option>`).join("")}

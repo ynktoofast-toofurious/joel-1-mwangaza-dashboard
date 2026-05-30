@@ -120,15 +120,21 @@ function mergeDraft(baseDraft, patchDraft) {
     ...patchDraft
   };
 
+  // Keep previously collected values when model returns empty strings on later turns.
+  const keepBaseWhenEmpty = (nextValue, baseValue) => {
+    const nextClean = normalizeText(nextValue, "");
+    return nextClean || normalizeText(baseValue, "");
+  };
+
   return {
-    reporterReference: normalizeReference(merged.reporterReference),
-    institution: normalizeText(merged.institution, ""),
-    city: normalizeText(merged.city, ""),
-    description: normalizeText(merged.description, ""),
-    category: normalizeText(merged.category, ""),
-    severity: normalizeSeverity(merged.severity),
-    statut: normalizeText(merged.statut, "nouveau"),
-    revision: normalizeText(merged.revision, "0")
+    reporterReference: normalizeReference(keepBaseWhenEmpty(merged.reporterReference, baseDraft?.reporterReference)),
+    institution: keepBaseWhenEmpty(merged.institution, baseDraft?.institution),
+    city: keepBaseWhenEmpty(merged.city, baseDraft?.city),
+    description: keepBaseWhenEmpty(merged.description, baseDraft?.description),
+    category: keepBaseWhenEmpty(merged.category, baseDraft?.category),
+    severity: normalizeSeverity(keepBaseWhenEmpty(merged.severity, baseDraft?.severity)),
+    statut: normalizeText(keepBaseWhenEmpty(merged.statut, baseDraft?.statut), "nouveau"),
+    revision: normalizeText(keepBaseWhenEmpty(merged.revision, baseDraft?.revision), "0")
   };
 }
 
@@ -277,7 +283,7 @@ async function extractClaimWithOpenAI(messageText) {
   };
 }
 
-async function saveClaimToRedshift({ from, messageId, messageText, claim }) {
+async function saveClaimToRedshift({ from, messageId, messageText, claim, ingestionSource }) {
   const dateKey = await ensureDateKey();
   const categoryKey = await ensureDimension("dim_category", "category_key", "category_name", claim.category);
   const statusKey = await ensureDimension("dim_status", "status_key", "status_name", claim.statut || DEFAULT_STATUS);
@@ -303,7 +309,19 @@ async function saveClaimToRedshift({ from, messageId, messageText, claim }) {
       updated_at
     )
     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, current_timestamp, current_timestamp)`,
-    [incidentRef, dateKey, categoryKey, statusKey, severityKey, institutionKey, locationKey, claim.description || "", claim.reporterReference || "Non fourni", claim.revision || 0, "whatsapp_webhook"]
+    [
+      incidentRef,
+      dateKey,
+      categoryKey,
+      statusKey,
+      severityKey,
+      institutionKey,
+      locationKey,
+      claim.description || "",
+      claim.reporterReference || "Non fourni",
+      claim.revision || 0,
+      normalizeText(ingestionSource, "whatsapp_number")
+    ]
   );
 
   const inserted = await query("select incident_key from fact_incident where incident_ref = $1", [incidentRef]);
@@ -635,7 +653,8 @@ export async function processClaimMessage(message) {
     from: message.from,
     messageId: message.messageId,
     messageText: message.text,
-    claim
+    claim,
+    ingestionSource: message.from?.startsWith("web_") ? "demo_ui" : "whatsapp_number"
   });
 
   session.status = "completed";
