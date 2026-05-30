@@ -460,6 +460,7 @@ function WaPhoneModal({ isOpen, onClose }) {
   const [greeted, setGreeted] = useState(false);
   const [doneRef, setDoneRef] = useState("");
   const chatRef = React.useRef(null);
+  const phoneRef = React.useRef(null);
 
   const userId = React.useMemo(() => {
     let uid = sessionStorage.getItem("mwm_wa_uid");
@@ -506,6 +507,34 @@ function WaPhoneModal({ isOpen, onClose }) {
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen || !phoneRef.current) return;
+
+    const updateViewportHeight = () => {
+      const visual = window.visualViewport;
+      const nextHeight = visual ? visual.height : window.innerHeight;
+      phoneRef.current.style.setProperty("--wa-viewport-height", `${Math.max(320, Math.floor(nextHeight - 8))}px`);
+      scrollBottom();
+    };
+
+    updateViewportHeight();
+
+    const visual = window.visualViewport;
+    if (visual) {
+      visual.addEventListener("resize", updateViewportHeight);
+      visual.addEventListener("scroll", updateViewportHeight);
+    }
+    window.addEventListener("orientationchange", updateViewportHeight);
+
+    return () => {
+      if (visual) {
+        visual.removeEventListener("resize", updateViewportHeight);
+        visual.removeEventListener("scroll", updateViewportHeight);
+      }
+      window.removeEventListener("orientationchange", updateViewportHeight);
+    };
+  }, [isOpen]);
+
   const sendMsg = async (text) => {
     if (busy || !text.trim() || done) return;
     setBusy(true);
@@ -539,7 +568,7 @@ function WaPhoneModal({ isOpen, onClose }) {
   return createPortal(
     html`
       <div className="wa-backdrop" onClick=${(e) => e.target.classList.contains("wa-backdrop") && onClose()}>
-        <div className="wa-phone" role="dialog" aria-modal="true" aria-label="Signalement WhatsApp">
+        <div className="wa-phone" ref=${phoneRef} role="dialog" aria-modal="true" aria-label="Signalement WhatsApp">
           <div className="wa-notch" aria-hidden="true"></div>
 
           <div className="wa-statusbar" aria-hidden="true">
@@ -573,7 +602,7 @@ function WaPhoneModal({ isOpen, onClose }) {
               </div>
             `}
             ${done && html`
-              <div className="wa-success">✅ Incident enregistré · Réf: ${doneRef}</div>
+              <div className="wa-success">✅ Incident enregistré · Réf: ${doneRef}<br/>Vos informations sont chiffrées et votre identité reste protégée.</div>
             `}
           </div>
 
@@ -584,7 +613,13 @@ function WaPhoneModal({ isOpen, onClose }) {
               rows="1"
               disabled=${busy || done}
               value=${inputVal}
-              onInput=${(e) => setInputVal(e.target.value)}
+              onFocus=${() => setTimeout(scrollBottom, 120)}
+              onInput=${(e) => {
+                setInputVal(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(110, e.target.scrollHeight)}px`;
+                scrollBottom();
+              }}
               onKeyDown=${(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();

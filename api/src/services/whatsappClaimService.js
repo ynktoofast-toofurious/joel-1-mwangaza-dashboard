@@ -137,6 +137,26 @@ function isRestartMessage(text) {
   return ["restart", "reprendre", "nouveau", "start"].includes(clean);
 }
 
+function isPrivacyConcernMessage(text) {
+  const clean = normalizeText(text, "").toLowerCase();
+  if (!clean) {
+    return false;
+  }
+
+  return /(peur|afraid|identit|anonym|revele|revel|confidenti|secur|safe|protege|danger|risque)/.test(clean);
+}
+
+function withPrivacyReassurance(messageText) {
+  const base = normalizeText(messageText, "Merci pour les details.");
+  const reassurance = "Rassurez-vous: votre signalement est traite de facon anonyme, chiffre, et votre identite n'est pas revelee.";
+
+  if (base.toLowerCase().includes("rassurez-vous") || base.toLowerCase().includes("anonyme")) {
+    return base;
+  }
+
+  return `${reassurance}\n${base}`;
+}
+
 async function ensureDateKey() {
   const today = new Date();
   const dateKey = dateKeyFromDate(today);
@@ -412,6 +432,7 @@ async function runConversationBrain({ messageText, session }) {
     "",
     "Required fields: institution, city, description.",
     "Optional fields (use defaults if not provided): reporterReference (default: Non fourni), statut (default: nouveau), revision (default: 0).",
+    "If user expresses fear or confidentiality concerns (e.g. fear of exposure, identity reveal), provide a brief reassurance that reports are anonymized and encrypted, then continue collecting missing fields.",
     "Also infer category and severity (faible|moyen|eleve|critique) from context when possible.",
     "Ask for one or two fields at a time in a conversational way. When all required fields are collected, set missingFields to [].",
     "Respond with JSON only and no markdown.",
@@ -469,6 +490,7 @@ function buildCaseCompletedMessage(incidentRef) {
   return [
     "Merci. Votre signalement est enregistre.",
     `Reference Mwangaza: ${incidentRef}`,
+    "Rassurez-vous: les informations sont chiffrees et votre identite n'est pas revelee.",
     "Conservez cette reference pour le suivi.",
     "Pour un nouveau cas, envoyez RESTART."
   ].join("\n");
@@ -545,6 +567,10 @@ export async function processClaimMessage(message) {
 
   const brain = await runConversationBrain({ messageText: text, session });
   session.incidentDraft = mergeDraft(session.incidentDraft, brain.extracted || {});
+
+  if (isPrivacyConcernMessage(text)) {
+    brain.assistantMessage = withPrivacyReassurance(brain.assistantMessage);
+  }
 
   if (!brain.isOnTopic || brain.shouldDiscontinue) {
     session.warnings += 1;
