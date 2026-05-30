@@ -586,6 +586,11 @@ export async function processClaimMessage(message) {
   const text = normalizeText(message.text, "");
   let session = await loadConversationSession(message.from);
 
+  // After a completed claim, treat any new incoming text as a new claim session.
+  if (session.completed && !isRestartMessage(text)) {
+    session = buildDefaultSession(message.from);
+  }
+
   if (session.status === "blocked" && !isRestartMessage(text)) {
     return {
       referenceNumber: "SESSION-BLOCKED",
