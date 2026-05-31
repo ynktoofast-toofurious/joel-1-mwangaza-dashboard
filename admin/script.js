@@ -667,6 +667,11 @@ const title = document.getElementById("sectionTitle");
 const subtitle = document.getElementById("sectionSubtitle");
 const routePill = document.getElementById("routePill");
 
+function resolveTabFromHash() {
+  const tab = String(window.location.hash || "").replace("#", "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(sections, tab) ? tab : "dashboard";
+}
+
 function isSeoAccessGranted() {
   return sessionStorage.getItem(SEO_ACCESS_KEY) === "true";
 }
@@ -697,6 +702,9 @@ function switchTab(tab) {
   title.textContent = newTitle;
   subtitle.textContent = newSubtitle;
   routePill.textContent = route;
+  if (window.location.hash !== `#${tab}`) {
+    window.history.replaceState(null, "", `#${tab}`);
+  }
   logPageAccess(route);
 
   if (tab === "seo") loadSeoTab();
@@ -707,7 +715,7 @@ async function bootstrap() {
   registerEvents();
   renderFeatures();
   await Promise.all([loadIncidents(), loadUsers(), loadSubscriptions(), loadAnalytics()]);
-  await logPageAccess("/admin/dashboard");
+  switchTab(resolveTabFromHash());
 }
 
 navItems.forEach((item) => item.addEventListener("click", () => switchTab(item.dataset.tab)));

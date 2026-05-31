@@ -228,8 +228,9 @@
     </div>
 
     <script>
-      const PROJECT_PATH = "/MwangazaMail/";
+      const PROJECT_PATH = "/admin/#seo";
       const PROJECT_ACCESS_CODES = ["YNK19912026", "MwangazaMail-2026"];
+      const SEO_ACCESS_KEY = "mwangaza_seo_access_granted";
 
       const openProjectBtn   = document.getElementById("openProjectBtn");
       const accessBackdrop   = document.getElementById("accessBackdrop");
@@ -260,6 +261,7 @@
           accessError.textContent = "Invalid access code. Please try again.";
           return;
         }
+        sessionStorage.setItem(SEO_ACCESS_KEY, "true");
         window.location.assign(PROJECT_PATH);
       };
 
