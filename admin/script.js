@@ -67,6 +67,7 @@ const sectionMeta = {
 
 const SEO_ACCESS_CODE = "YNK19912026";
 const SEO_ACCESS_KEY = "mwangaza_seo_access_granted";
+const PRODUCTION_API_BASE = "https://api.mysmartwork.tech/api/admin";
 
 const severityOptions = ["faible", "moyen", "eleve", "critique"];
 const statusOptions = ["nouveau", "en_cours", "resolu"];
@@ -86,9 +87,9 @@ const state = {
 
 const apiCandidates = (() => {
   if (window.location.hostname === "localhost" && window.location.port === "5500") {
-    return ["http://localhost:4000/api/admin"];
+    return ["http://localhost:4000/api/admin", PRODUCTION_API_BASE];
   }
-  return ["/api/admin", "http://localhost:4000/api/admin"];
+  return ["/api/admin", PRODUCTION_API_BASE, "http://localhost:4000/api/admin"];
 })();
 
 async function fetchJson(path, options) {
