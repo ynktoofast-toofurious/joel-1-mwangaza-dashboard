@@ -673,19 +673,58 @@ function resolveTabFromHash() {
   return Object.prototype.hasOwnProperty.call(sections, tab) ? tab : "dashboard";
 }
 
+function hasSeoAccessTokenInUrl() {
+  try {
+    return new URLSearchParams(window.location.search).get("seoAccess") === "1";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function clearSeoAccessTokenInUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("seoAccess")) return;
+    params.delete("seoAccess");
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash || ""}`;
+    window.history.replaceState(null, "", nextUrl);
+  } catch (_error) {
+    // Ignore URL rewriting errors.
+  }
+}
+
+function setSeoAccessGranted(value) {
+  try {
+    if (value) sessionStorage.setItem(SEO_ACCESS_KEY, "true");
+    else sessionStorage.removeItem(SEO_ACCESS_KEY);
+  } catch (_error) {
+    // Ignore storage failures; URL token can still grant one-time access.
+  }
+}
+
 function isSeoAccessGranted() {
-  return sessionStorage.getItem(SEO_ACCESS_KEY) === "true";
+  try {
+    return sessionStorage.getItem(SEO_ACCESS_KEY) === "true";
+  } catch (_error) {
+    return false;
+  }
 }
 
 function requestSeoAccess() {
   if (isSeoAccessGranted()) return true;
+  if (hasSeoAccessTokenInUrl()) {
+    setSeoAccessGranted(true);
+    clearSeoAccessTokenInUrl();
+    return true;
+  }
   const enteredCode = window.prompt("Code d'acces SEO requis :");
   if (!enteredCode) return false;
   if (enteredCode.trim() !== SEO_ACCESS_CODE) {
     alert("Code invalide. Acces SEO refuse.");
     return false;
   }
-  sessionStorage.setItem(SEO_ACCESS_KEY, "true");
+  setSeoAccessGranted(true);
   return true;
 }
 

@@ -229,7 +229,7 @@
 
     <script>
       const PROJECT_PATH = "/MwangazaMail/";
-      const SEO_PROJECT_PATH = "/admin/#seo";
+      const SEO_PROJECT_PATH = "/admin/?seoAccess=1#seo";
       const PROJECT_ACCESS_CODES = [
         { code: "MwangazaMail-2026", allowSeo: false, path: PROJECT_PATH },
         { code: "YNK19912026", allowSeo: true, path: SEO_PROJECT_PATH }
@@ -258,6 +258,18 @@
 
       const normalizeCode = (value) => String(value || "").trim().toUpperCase();
 
+      const setSeoAccess = (allowSeo) => {
+        try {
+          if (allowSeo) {
+            sessionStorage.setItem(SEO_ACCESS_KEY, "true");
+          } else {
+            sessionStorage.removeItem(SEO_ACCESS_KEY);
+          }
+        } catch (_error) {
+          // Continue with URL-token fallback if storage is blocked.
+        }
+      };
+
       const proceedToProject = () => {
         const entered = normalizeCode(accessCodeInput.value);
         const accessRule = PROJECT_ACCESS_CODES.find((item) => normalizeCode(item.code) === entered);
@@ -266,11 +278,7 @@
           return;
         }
 
-        if (accessRule.allowSeo) {
-          sessionStorage.setItem(SEO_ACCESS_KEY, "true");
-        } else {
-          sessionStorage.removeItem(SEO_ACCESS_KEY);
-        }
+        setSeoAccess(accessRule.allowSeo);
 
         window.location.assign(accessRule.path);
       };
