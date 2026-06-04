@@ -49,8 +49,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 
 app.use((error, _req, res, _next) => {
-  console.error(error);
-  res.status(500).json({ message: error.message || "Internal server error" });
+  console.error("[api-error]", error?.stack || error?.message || error);
+  res.status(500).json({ message: "Service temporairement indisponible" });
 });
 
 app.listen(config.port, () => {

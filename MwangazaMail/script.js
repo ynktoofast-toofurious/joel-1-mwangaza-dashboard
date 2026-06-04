@@ -451,9 +451,9 @@ function CookieBanner({ visible, onAccept, onReject }) {
   `;
 }
 
-const WA_WEBCHAT_API = isLocalBrowser
-  ? "http://localhost:4000/api/whatsapp/webchat"
-  : `${PROD_API_ORIGIN}/api/whatsapp/webchat`;
+const WA_WEBCHAT_CANDIDATES = isLocalBrowser
+  ? ["http://localhost:4000/api/whatsapp/webchat", `${PROD_API_ORIGIN}/api/whatsapp/webchat`]
+  : [`${PROD_API_ORIGIN}/api/whatsapp/webchat`, "/api/whatsapp/webchat"];
 const WA_WELCOME = "Bonjour ! 👋 Je suis le bot MwangazaMail.\n\nJe vous aide à déclarer un incident de corruption, fraude ou abus d'autorité de façon totalement anonyme.\n\nCommencez par me donner votre numéro de référence (ou tapez Aucun), puis l'institution concernée, la ville et une description de l'incident.";
 
 function WaPhoneModal({ isOpen, onClose }) {
@@ -545,20 +545,36 @@ function WaPhoneModal({ isOpen, onClose }) {
     addMsg(text, "user");
     setInputVal("");
     try {
-      const resp = await fetch(WA_WEBCHAT_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, text: text.trim() })
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        addMsg("⚠️ Erreur: " + (data.message || "Problème de connexion."), "bot");
-      } else {
-        addMsg(data.responseText, "bot");
-        if (data.complete) {
-          setDone(true);
-          setDoneRef(data.referenceNumber);
+      const payload = JSON.stringify({ userId, text: text.trim() });
+      let delivered = false;
+
+      for (const endpoint of WA_WEBCHAT_CANDIDATES) {
+        try {
+          const resp = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload
+          });
+
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            continue;
+          }
+
+          addMsg(data.responseText || "✅ Message reçu.", "bot");
+          if (data.complete) {
+            setDone(true);
+            setDoneRef(data.referenceNumber);
+          }
+          delivered = true;
+          break;
+        } catch (_err) {
+          // Try next endpoint candidate.
         }
+      }
+
+      if (!delivered) {
+        addMsg("⚠️ Le bot est temporairement indisponible. Veuillez réessayer dans quelques instants.", "bot");
       }
     } catch (_) {
       addMsg("⚠️ Impossible de joindre le serveur. Vérifiez votre connexion.", "bot");
