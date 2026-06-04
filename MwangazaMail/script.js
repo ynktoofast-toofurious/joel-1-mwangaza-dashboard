@@ -18,6 +18,7 @@ const apiCandidates = isLocalBrowser
       `${ALB_API_ORIGIN}/api/admin`
     ]
   : [
+      `${ALB_API_ORIGIN}/api/admin`,
       ...PROD_API_ORIGINS.map((origin) => `${origin}/api/admin`),
       "/api/admin"
     ];
@@ -463,6 +464,7 @@ const WA_WEBCHAT_CANDIDATES = isLocalBrowser
       `${ALB_API_ORIGIN}/api/whatsapp/webchat`
     ]
   : [
+      `${ALB_API_ORIGIN}/api/whatsapp/webchat`,
       ...PROD_API_ORIGINS.map((origin) => `${origin}/api/whatsapp/webchat`),
       "/api/whatsapp/webchat"
     ];
