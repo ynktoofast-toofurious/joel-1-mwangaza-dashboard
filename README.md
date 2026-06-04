@@ -5,7 +5,8 @@ This repository contains:
 - A public landing page (`index.html`, `script.js`, `styles.css`)
 - A protected admin front-end (`admin/`)
 - A Node.js API (`api/`) designed for Neon PostgreSQL-backed analytics and governance
-- Docker setup for running web + API together
+- A no-Docker deployment path (PM2 + Nginx on a Linux VM)
+- Optional Docker setup for running web + API together
 
 ## 1) Configure API Environment
 
@@ -108,7 +109,63 @@ Admin UI attempts API in this order:
 1. `/api/admin` (same origin, for reverse proxy/container setups)
 2. `http://localhost:4000/api/admin` (local development fallback)
 
-## 6) Docker Run
+## 6) No-Docker Deployment (Recommended)
+
+This path deploys directly to a Linux VM (Ubuntu/Debian) without ECS/ECR/Docker.
+
+### 6.1 One-time server bootstrap
+
+Run on the server:
+
+```bash
+bash tools/bootstrap-nodocker-server.sh
+```
+
+Then edit runtime secrets:
+
+```bash
+sudo nano /etc/mwangaza/api.env
+```
+
+Enable PM2 to restart apps after reboot (run once on server):
+
+```bash
+pm2 startup
+pm2 save
+```
+
+### 6.2 Deploy from local Windows machine
+
+From repository root:
+
+```powershell
+.\tools\deploy-nodocker.ps1 -ServerHost <server-ip-or-hostname> -ServerUser ubuntu -KeyPath C:\path\to\key.pem
+```
+
+Optional domain overrides:
+
+```powershell
+.\tools\deploy-nodocker.ps1 -ServerHost <server> -SiteDomain mysmartwork.tech -SiteDomainAlias www.mysmartwork.tech -ApiDomain api.mysmartwork.tech
+```
+
+What this script does:
+
+- Uploads a release archive
+- Installs API dependencies on the server (`npm ci --omit=dev`)
+- Switches `/opt/mwangaza/current` to the new release
+- Reloads PM2 app (`deploy/nodocker/ecosystem.config.cjs`)
+- Publishes Nginx config from `deploy/nodocker/nginx-mwangaza.conf`
+- Reloads Nginx
+
+### 6.3 Enable HTTPS
+
+After DNS points to the server, run on the server:
+
+```bash
+sudo certbot --nginx -d mysmartwork.tech -d www.mysmartwork.tech -d api.mysmartwork.tech
+```
+
+## 7) Docker Run (Optional)
 
 From repository root:
 
@@ -120,7 +177,7 @@ docker compose up --build
 - API container runs Node service.
 - Nginx proxies `/api/*` requests to API service.
 
-## 7) Implemented Admin Capabilities
+## 8) Implemented Admin Capabilities
 
 - Incident filters: category, city, severity, status, search
 - Incident revision save (status/severity updates)
@@ -129,18 +186,18 @@ docker compose up --build
   - Audit trail table (`audit_trail`)
   - KPI cards for events/routes/users/locations
 
-## 8) Landing Governance Additions
+## 9) Landing Governance Additions
 
 - Cookies disclosure popup with explicit accept/reject
 - Consent persistence in `localStorage`
 - Public route access tracking request to admin API
 
-## 9) Auth Guard (Current)
+## 10) Auth Guard (Current)
 
 Admin access remains local-storage based (`mwangaza_auth`) for lightweight demo use.
 For production, replace with server-side auth and signed session/JWT controls.
 
-## 10) WhatsApp Claim Intake (Webhook + OpenAI + Neon PostgreSQL)
+## 11) WhatsApp Claim Intake (Webhook + OpenAI + Neon PostgreSQL)
 
 The API now supports WhatsApp Business incoming chat intake:
 
