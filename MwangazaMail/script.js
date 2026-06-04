@@ -8,11 +8,13 @@ const html = htm.bind(React.createElement);
 const AUTH_KEY = "mwangaza_auth";
 const adminUrl = new URL("./admin/", import.meta.url).href;
 const COOKIE_KEY = "mwangaza_cookie_consent";
+const PROD_API_ORIGIN = "https://api.mysmartwork.tech";
+const isLocalBrowser = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
 const apiCandidates =
-  window.location.hostname === "localhost" && window.location.port === "5500"
-    ? ["http://localhost:4000/api/admin"]
-    : ["/api/admin", "http://localhost:4000/api/admin"];
+  isLocalBrowser
+    ? ["/api/admin", "http://localhost:4000/api/admin", `${PROD_API_ORIGIN}/api/admin`]
+    : [`${PROD_API_ORIGIN}/api/admin`, "/api/admin"];
 
 async function trackAccess(route) {
   const payload = {
@@ -449,7 +451,9 @@ function CookieBanner({ visible, onAccept, onReject }) {
   `;
 }
 
-const WA_WEBCHAT_API = "https://api.mysmartwork.tech/api/whatsapp/webchat";
+const WA_WEBCHAT_API = isLocalBrowser
+  ? "http://localhost:4000/api/whatsapp/webchat"
+  : `${PROD_API_ORIGIN}/api/whatsapp/webchat`;
 const WA_WELCOME = "Bonjour ! 👋 Je suis le bot MwangazaMail.\n\nJe vous aide à déclarer un incident de corruption, fraude ou abus d'autorité de façon totalement anonyme.\n\nCommencez par me donner votre numéro de référence (ou tapez Aucun), puis l'institution concernée, la ville et une description de l'incident.";
 
 function WaPhoneModal({ isOpen, onClose }) {
