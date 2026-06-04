@@ -156,7 +156,7 @@
     </footer>
     <script>
       const ACCESS_KEY = "mwangaza_access_code_unlocked";
-      const PROJECT_ACCESS_CODE = "YNK-ACCESS-2026";
+      const PROJECT_ACCESS_CODES = ["MwangazaMail-2026", "YNK-ACCESS-2026"];
       const accessBackdrop = document.getElementById("accessBackdrop");
       const accessCodeInput = document.getElementById("accessCodeInput");
       const accessError = document.getElementById("accessError");
@@ -187,7 +187,7 @@
       }
 
       accessConfirmBtn.addEventListener("click", () => {
-        if (accessCodeInput.value.trim() !== PROJECT_ACCESS_CODE) {
+        if (!PROJECT_ACCESS_CODES.includes(accessCodeInput.value.trim())) {
           accessError.textContent = "Invalid access code. Please try again.";
           return;
         }
