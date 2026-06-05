@@ -233,6 +233,62 @@ a {
   margin-top: 34px;
 }
 
+.hero-whatsapp-connect {
+  margin: 24px auto 0;
+  max-width: 920px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.wa-qr-card {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.wa-qr-card figcaption {
+  color: #5a6485;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wa-qr-image {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  border: 1px solid #dde5f5;
+  background: #fff;
+}
+
+.wa-quick-links {
+  text-align: left;
+  color: #4e5a78;
+  display: grid;
+  gap: 8px;
+}
+
+.wa-quick-links p {
+  margin: 0;
+}
+
+.wa-link-inline {
+  color: #1f8e4d;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.wa-link-inline:hover {
+  text-decoration: underline;
+}
+
 .security-points {
   margin: 26px 0 0;
   padding: 0;
@@ -1786,6 +1842,15 @@ details p {
   .portal-footer {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .hero-whatsapp-connect {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .wa-quick-links {
+    text-align: center;
   }
 
   .contact-grid {
