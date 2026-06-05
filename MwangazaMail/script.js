@@ -1212,6 +1212,19 @@ function App() {
               <article className="contact-direct">
                 <h4>Contact direct</h4>
                 <p>contact@mwangazamail.cd</p>
+                <div className="contact-wa">
+                  <img
+                    className="contact-wa-qr"
+                    src=${WHATSAPP_QR_SRC}
+                    alt="QR code WhatsApp MwangazaMail"
+                    loading="lazy"
+                  />
+                  <div className="contact-wa-links">
+                    <a href=${WHATSAPP_CHAT_LINK} target="_blank" rel="noreferrer">WhatsApp: ${WHATSAPP_PHONE_DISPLAY}</a>
+                    <a href=${WHATSAPP_PHONE_TEL}>Tapez le numero</a>
+                    <a href=${WHATSAPP_CHAT_LINK} target="_blank" rel="noreferrer">Click here</a>
+                  </div>
+                </div>
               </article>
             </aside>
 
