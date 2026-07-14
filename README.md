@@ -252,3 +252,12 @@ Nginx config `deploy/nodocker/nginx-mwangaza.conf` includes both location blocks
 Expected ALKASH-TRANS static path on server:
 
 - `/var/www/alkash-trans-site`
+
+### Legacy URL Protection
+
+Nginx now redirects legacy/old page-name links to the domain root:
+
+- `/*.html` -> `https://www.mysmartwork.tech/`
+- `/MwangazaMail/*.html` -> `https://www.mysmartwork.tech/`
+- `/ALKASH-TRANS/*.html` -> `https://www.mysmartwork.tech/`
+- old admin links (`/admin`, `/MwangazaMail/admin`) -> `https://www.mysmartwork.tech/`
