@@ -745,6 +745,133 @@ select {
     min-height: 220px;
 }
 
+.quote-builder-panel {
+    margin-top: 1.8rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.quote-builder-header {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+    padding: 1rem 1.1rem;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.quote-builder-header h2,
+.quote-builder-header p {
+    margin: 0;
+}
+
+.quote-builder-header .button {
+    justify-self: start;
+}
+
+.quote-poster-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--white);
+    padding: 0.8rem;
+}
+
+.quote-poster-card img {
+    width: 100%;
+    border-radius: var(--radius-sm);
+    display: block;
+}
+
+.quote-poster-fallback p {
+    margin: 0;
+    color: var(--slate);
+}
+
+.quote-item-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.quote-item-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--white);
+    padding: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.quote-item-card h3,
+.quote-item-card p {
+    margin: 0;
+}
+
+.quote-item-card h3 {
+    font-size: 0.95rem;
+    color: var(--navy);
+}
+
+.quote-item-card p {
+    margin-top: 0.3rem;
+    color: var(--orange);
+    font-weight: 700;
+}
+
+.quote-add-btn {
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--orange);
+    color: var(--white);
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.quote-draft-summary {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+    padding: 1rem 1.1rem;
+    display: grid;
+    gap: 0.8rem;
+}
+
+.quote-draft-summary h2,
+.quote-draft-summary p {
+    margin: 0;
+}
+
+.quote-draft-summary ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.quote-draft-summary li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px dashed var(--line-strong);
+    padding-bottom: 0.4rem;
+}
+
+.quote-draft-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    color: var(--navy);
+}
+
 .page-hero {
     border-bottom: 1px solid var(--line);
     background: linear-gradient(180deg, #f5f8fa 0%, #ffffff 100%);
@@ -1131,6 +1258,10 @@ select {
     .admin-health-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .quote-item-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 860px) {
@@ -1178,6 +1309,7 @@ select {
     .home-metrics,
     .announcement-grid,
     .field-grid,
+    .quote-item-grid,
     .social-links,
     .admin-health-grid {
         grid-template-columns: 1fr;

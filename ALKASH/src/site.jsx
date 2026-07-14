@@ -55,6 +55,56 @@ const socialLinks = [
     ['WhatsApp', 'https://wa.me/18178846898']
 ];
 
+const QUOTE_DRAFT_KEY = 'alkashQuoteDraft';
+
+const quoteBuilderItems = [
+    { key: 'small_box', label: 'Small Box (16x12x12)', price: 50 },
+    { key: 'medium_box', label: 'Medium Box (18x18x16)', price: 80 },
+    { key: 'large_box', label: 'Large Box (18x18x24)', price: 120 },
+    { key: 'xlarge_box', label: 'XLarge Box (24x18x24)', price: 150 },
+    { key: 'suitcase_medium', label: 'Suitcase Medium', price: 50 },
+    { key: 'suitcase_large', label: 'Suitcase Large', price: 80 },
+    { key: 'drum_50', label: 'Drum 50"', price: 220 },
+    { key: 'drum_53', label: 'Drum 53"', price: 280 },
+    { key: 'sedan_vehicle', label: 'Sedan Vehicle', price: 2700 },
+    { key: 'suv_vehicle', label: 'SUV Vehicle', price: 3000 },
+    { key: 'big_suv_4x4', label: 'Big SUV 4x4', price: 3500 }
+];
+
+function readQuoteDraft() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(QUOTE_DRAFT_KEY) || '[]');
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+        return parsed.filter((item) => item && typeof item.key === 'string' && Number(item.quantity) > 0);
+    } catch {
+        return [];
+    }
+}
+
+function writeQuoteDraft(items) {
+    localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify(items));
+}
+
+function addItemToQuoteDraft(item) {
+    const draft = readQuoteDraft();
+    const index = draft.findIndex((entry) => entry.key === item.key);
+
+    if (index >= 0) {
+        draft[index] = { ...draft[index], quantity: draft[index].quantity + 1 };
+    } else {
+        draft.push({ key: item.key, label: item.label, price: item.price, quantity: 1 });
+    }
+
+    writeQuoteDraft(draft);
+    return draft;
+}
+
+function clearQuoteDraft() {
+    localStorage.removeItem(QUOTE_DRAFT_KEY);
+}
+
 function navItemIcon(key) {
     if (key === 'services') {
         return (
@@ -395,6 +445,14 @@ function AboutPage({ copy }) {
 }
 
 function ServicesPage({ copy }) {
+    const [draftCount, setDraftCount] = useState(() => readQuoteDraft().reduce((sum, item) => sum + item.quantity, 0));
+    const [showPoster, setShowPoster] = useState(true);
+
+    function handleAddToQuote(item) {
+        const updated = addItemToQuoteDraft(item);
+        setDraftCount(updated.reduce((sum, entry) => sum + entry.quantity, 0));
+    }
+
     return (
         <PageFrame eyebrow={copy.services.eyebrow} title={copy.services.title} intro={copy.services.intro}>
             <div className="services-grid">
@@ -405,6 +463,42 @@ function ServicesPage({ copy }) {
                     </article>
                 ))}
             </div>
+
+            <section className="quote-builder-panel">
+                <div className="quote-builder-header">
+                    <h2>Build your quote instantly</h2>
+                    <p>Use the + button to add items from the official price list. Items in draft: <strong>{draftCount}</strong></p>
+                    <a className="button button-primary" href={getMaskedHref('quote')}>Open Quote Builder</a>
+                </div>
+
+                {showPoster ? (
+                    <figure className="quote-poster-card">
+                        <img
+                            src={getAssetHref('Logo/alkash-pricing-card.png')}
+                            alt="Alkash service and shipping price poster"
+                            onError={() => setShowPoster(false)}
+                        />
+                    </figure>
+                ) : (
+                    <div className="quote-poster-card quote-poster-fallback">
+                        <p>Add your provided price image at <strong>ALKASH/public/Logo/alkash-pricing-card.png</strong> to display it here.</p>
+                    </div>
+                )}
+
+                <div className="quote-item-grid">
+                    {quoteBuilderItems.map((item) => (
+                        <article className="quote-item-card" key={item.key}>
+                            <div>
+                                <h3>{item.label}</h3>
+                                <p>${item.price.toLocaleString()}</p>
+                            </div>
+                            <button className="quote-add-btn" type="button" onClick={() => handleAddToQuote(item)} aria-label={`Add ${item.label} to quote`}>
+                                +
+                            </button>
+                        </article>
+                    ))}
+                </div>
+            </section>
         </PageFrame>
     );
 }
@@ -451,12 +545,44 @@ function SchedulePage({ copy }) {
 
 function QuotePage({ copy }) {
     const [feedback, setFeedback] = useState('');
+    const [draftItems, setDraftItems] = useState(() => readQuoteDraft());
+
+    const draftTotal = draftItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    function handleClearDraft() {
+        clearQuoteDraft();
+        setDraftItems([]);
+    }
 
     return (
         <PageFrame eyebrow={copy.quote.eyebrow} title={copy.quote.title} intro={copy.quote.intro}>
+            {draftItems.length ? (
+                <section className="quote-draft-summary">
+                    <div>
+                        <h2>Selected pricing items</h2>
+                        <p>These items were added from Services using the + button.</p>
+                    </div>
+                    <ul>
+                        {draftItems.map((item) => (
+                            <li key={item.key}>
+                                <span>{item.label} x {item.quantity}</span>
+                                <strong>${(item.price * item.quantity).toLocaleString()}</strong>
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="quote-draft-total">
+                        <span>Estimated subtotal</span>
+                        <strong>${draftTotal.toLocaleString()}</strong>
+                    </div>
+                    <button type="button" className="button button-secondary" onClick={handleClearDraft}>Clear Builder</button>
+                </section>
+            ) : null}
+
             <form className="form-card form-layout" onSubmit={(event) => {
                 event.preventDefault();
                 setFeedback(copy.quote.success);
+                clearQuoteDraft();
+                setDraftItems([]);
                 event.currentTarget.reset();
             }}>
                 <div className="field-grid">
