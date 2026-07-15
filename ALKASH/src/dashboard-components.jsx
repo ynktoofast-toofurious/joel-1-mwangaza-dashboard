@@ -4,38 +4,75 @@
 import { useState } from 'react';
 import { uploadToS3, archiveAnnouncementToS3 } from './s3-utils.js';
 
+const sidebarSections = [
+    {
+        label: 'Overview',
+        items: [
+            { id: 'overview', label: 'Dashboard', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> }
+        ]
+    },
+    {
+        label: 'Content',
+        items: [
+            { id: 'inventory', label: 'Inventory', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> },
+            { id: 'announcements', label: 'Announcements', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> }
+        ]
+    },
+    {
+        label: 'Settings',
+        items: [
+            { id: 'seo', label: 'SEO Settings', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> }
+        ]
+    }
+];
+
 /**
  * Sidebar Navigation for Admin Dashboard
  */
 export function DashboardSidebar({ activeTab, onTabChange, session }) {
-    const menuItems = [
-        { id: 'overview', label: 'Dashboard', icon: '📊' },
-        { id: 'inventory', label: 'Inventory', icon: '📦' },
-        { id: 'announcements', label: 'Announcements', icon: '📢' },
-        { id: 'seo', label: 'SEO Settings', icon: '🔍' }
-    ];
+    const [collapsed, setCollapsed] = useState({});
+
+    function toggleSection(label) {
+        setCollapsed(prev => ({ ...prev, [label]: !prev[label] }));
+    }
 
     return (
         <aside className="dashboard-sidebar">
-            <div className="sidebar-header">
-                <h3>Admin Menu</h3>
+            <div className="sidebar-brand">
+                <span className="sidebar-brand-icon">⚙</span>
+                <span className="sidebar-brand-name">Admin Portal</span>
             </div>
+
             <nav className="sidebar-nav">
-                {menuItems.map(item => (
-                    <button
-                        key={item.id}
-                        className={`sidebar-item ${activeTab === item.id ? 'active' : ''}`}
-                        onClick={() => onTabChange(item.id)}
-                    >
-                        <span className="sidebar-icon">{item.icon}</span>
-                        <span className="sidebar-label">{item.label}</span>
-                    </button>
+                {sidebarSections.map(section => (
+                    <div key={section.label} className="sidebar-section">
+                        <button
+                            className="sidebar-section-header"
+                            onClick={() => toggleSection(section.label)}
+                        >
+                            <span>{section.label}</span>
+                            <span className={`sidebar-chevron ${collapsed[section.label] ? 'collapsed' : ''}`}>›</span>
+                        </button>
+                        {!collapsed[section.label] && section.items.map(item => (
+                            <button
+                                key={item.id}
+                                className={`sidebar-item ${activeTab === item.id ? 'active' : ''}`}
+                                onClick={() => onTabChange(item.id)}
+                            >
+                                <span className="sidebar-icon">{item.icon}</span>
+                                <span className="sidebar-label">{item.label}</span>
+                                {activeTab === item.id && <span className="sidebar-active-dot" />}
+                            </button>
+                        ))}
+                    </div>
                 ))}
             </nav>
+
             <div className="sidebar-footer">
-                <div className="user-info">
-                    <p><strong>{session?.name || 'Admin'}</strong></p>
-                    <p className="user-role">{session?.role}</p>
+                <div className="sidebar-user-avatar">{(session?.name || 'A')[0].toUpperCase()}</div>
+                <div className="sidebar-user-info">
+                    <p className="sidebar-user-name">{session?.name || 'Admin'}</p>
+                    <p className="sidebar-user-role">{session?.role}</p>
                 </div>
             </div>
         </aside>
@@ -46,36 +83,62 @@ export function DashboardSidebar({ activeTab, onTabChange, session }) {
  * Dashboard Overview - Summary Statistics
  */
 export function DashboardOverview({ session, health }) {
+    const metrics = [
+        { value: health?.totalUsers ?? 42, label: 'Total Users', icon: '👥', trend: '+4%' },
+        { value: health?.activeUsers ?? 28, label: 'Active Users', icon: '✅', trend: '+2%' },
+        { value: health?.openCases ?? 156, label: 'Open Cases', icon: '📋', trend: 'stable' },
+        { value: health?.uptime ?? '99.7%', label: 'Uptime', icon: '🟢', trend: '' },
+    ];
+
     return (
-        <div className="dashboard-panel">
-            <h2>Dashboard Overview</h2>
-            <p className="panel-description">Welcome to the Alkash-Trans Admin Portal</p>
-            
-            <div className="metrics-grid">
-                <div className="metric-card">
-                    <div className="metric-value">42</div>
-                    <div className="metric-label">Total Users</div>
-                </div>
-                <div className="metric-card">
-                    <div className="metric-value">28</div>
-                    <div className="metric-label">Active Users</div>
-                </div>
-                <div className="metric-card">
-                    <div className="metric-value">156</div>
-                    <div className="metric-label">Open Cases</div>
-                </div>
-                <div className="metric-card">
-                    <div className="metric-value">99.7%</div>
-                    <div className="metric-label">Uptime</div>
-                </div>
+        <div className="dash-page">
+            <div className="dash-breadcrumb">
+                <span className="dash-breadcrumb-root">Alkash-Trans Admin</span>
+                <span className="dash-breadcrumb-sep">›</span>
+                <span className="dash-breadcrumb-current">Overview</span>
             </div>
 
-            <div className="welcome-card">
-                <h3>Welcome back, {session?.name}!</h3>
-                <p>You are logged in as <strong>{session?.role}</strong></p>
-                <p>All data is stored securely in AWS S3 buckets.</p>
-                <div className="info-text">
-                    ℹ️ This dashboard manages service inventory, announcements, and SEO settings. All file uploads are stored in AWS S3 with zero local storage.
+            <div className="dash-page-header">
+                <h2 className="dash-page-title">Dashboard</h2>
+                <p className="dash-page-sub">Platform health and activity overview</p>
+            </div>
+
+            <div className="dash-alert-bar">
+                <span className="dash-alert-icon">ℹ</span>
+                <span>All images, announcements, and quotes are stored in <strong>AWS S3</strong>. Zero local storage.</span>
+            </div>
+
+            <div className="dash-metrics-grid">
+                {metrics.map(m => (
+                    <div key={m.label} className="dash-metric-card">
+                        <div className="dash-metric-icon">{m.icon}</div>
+                        <div className="dash-metric-body">
+                            <div className="dash-metric-value">{m.value}</div>
+                            <div className="dash-metric-label">{m.label}</div>
+                        </div>
+                        {m.trend && <div className={`dash-metric-trend ${m.trend === 'stable' ? 'neutral' : 'up'}`}>{m.trend}</div>}
+                    </div>
+                ))}
+            </div>
+
+            <div className="dash-section-header">Account</div>
+
+            <div className="dash-info-card">
+                <div className="dash-info-row">
+                    <span className="dash-info-label">Logged in as</span>
+                    <span className="dash-info-value">{session?.name}</span>
+                </div>
+                <div className="dash-info-row">
+                    <span className="dash-info-label">Role</span>
+                    <span className="dash-info-badge">{session?.role}</span>
+                </div>
+                <div className="dash-info-row">
+                    <span className="dash-info-label">Email</span>
+                    <span className="dash-info-value">{session?.email}</span>
+                </div>
+                <div className="dash-info-row">
+                    <span className="dash-info-label">Storage</span>
+                    <span className="dash-info-value">AWS S3 — <span style={{color:'#25d366',fontWeight:600}}>Active</span></span>
                 </div>
             </div>
         </div>
@@ -113,9 +176,17 @@ export function InventoryPage({ quoteBuilderItems, session, getServiceImageHref 
     }
 
     return (
+        <div className="dash-page">
+            <div className="dash-breadcrumb">
+                <span className="dash-breadcrumb-root">Alkash-Trans Admin</span>
+                <span className="dash-breadcrumb-sep">›</span>
+                <span className="dash-breadcrumb-current">Inventory</span>
+            </div>
+            <div className="dash-page-header">
+                <h2 className="dash-page-title">Service Inventory</h2>
+                <p className="dash-page-sub">Hover any item to change its image. Uploads go directly to AWS S3.</p>
+            </div>
         <div className="dashboard-panel inventory-panel">
-            <h2>Service Inventory</h2>
-            <p className="panel-description">Manage service images and details. All images are stored in AWS S3.</p>
             
             {uploadMessage && (
                 <div className={`upload-message ${uploadMessage.startsWith('✓') ? 'success' : 'error'}`}>
@@ -151,6 +222,7 @@ export function InventoryPage({ quoteBuilderItems, session, getServiceImageHref 
                     </div>
                 ))}
             </div>
+        </div>
         </div>
     );
 }
@@ -197,9 +269,17 @@ export function AnnouncementsPage({ session }) {
     }
 
     return (
+        <div className="dash-page">
+            <div className="dash-breadcrumb">
+                <span className="dash-breadcrumb-root">Alkash-Trans Admin</span>
+                <span className="dash-breadcrumb-sep">›</span>
+                <span className="dash-breadcrumb-current">Announcements</span>
+            </div>
+            <div className="dash-page-header">
+                <h2 className="dash-page-title">Announcements</h2>
+                <p className="dash-page-sub">Published announcements appear on the home page. All data archived to S3.</p>
+            </div>
         <div className="dashboard-panel announcements-panel">
-            <h2>Announcements Management</h2>
-            <p className="panel-description">Create and manage announcements displayed on the home page</p>
 
             <div className="announcement-form">
                 <h3>Create New Announcement</h3>
@@ -287,6 +367,7 @@ export function AnnouncementsPage({ session }) {
                 )}
             </div>
         </div>
+        </div>
     );
 }
 
@@ -311,9 +392,17 @@ export function SEOPage({ session }) {
     }
 
     return (
+        <div className="dash-page">
+            <div className="dash-breadcrumb">
+                <span className="dash-breadcrumb-root">Alkash-Trans Admin</span>
+                <span className="dash-breadcrumb-sep">›</span>
+                <span className="dash-breadcrumb-current">SEO Settings</span>
+            </div>
+            <div className="dash-page-header">
+                <h2 className="dash-page-title">SEO Settings</h2>
+                <p className="dash-page-sub">Configure meta tags for better search engine visibility.</p>
+            </div>
         <div className="dashboard-panel seo-panel">
-            <h2>SEO Settings</h2>
-            <p className="panel-description">Configure meta tags and SEO information for better search visibility</p>
 
             <div className="seo-form">
                 <form onSubmit={handleSave}>
@@ -393,6 +482,7 @@ export function SEOPage({ session }) {
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     );
 }
