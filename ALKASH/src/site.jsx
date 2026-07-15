@@ -58,21 +58,21 @@ const socialLinks = [
 const QUOTE_DRAFT_KEY = 'alkashQuoteDraft';
 
 const quoteBuilderItems = [
-    { key: 'small_box', label: 'Small Box (16x12x12)', price: 50, category: 'Boxes', icon: 'BX', rating: 4.8 },
-    { key: 'medium_box', label: 'Medium Box (18x18x16)', price: 80, category: 'Boxes', icon: 'BX', rating: 4.9 },
-    { key: 'large_small_box', label: 'Large (Small) Box (18x18x24)', price: 100, category: 'Boxes', icon: 'BX', rating: 4.8 },
-    { key: 'large_box', label: 'Large Box (24x18x24)', price: 120, category: 'Boxes', icon: 'BX', rating: 4.9 },
-    { key: 'xlarge_box', label: 'XLarge Box (24x18x24)', price: 150, category: 'Boxes', icon: 'BX', rating: 4.7 },
-    { key: 'xxlarge_box', label: 'XXLarge Box (18x21x16)', price: 200, category: 'Boxes', icon: 'BX', rating: 4.7 },
-    { key: 'suitcase_medium', label: 'Suitcase Medium', price: 50, category: 'Travel', icon: 'BG', rating: 4.6 },
-    { key: 'suitcase_large', label: 'Suitcase Large', price: 80, category: 'Travel', icon: 'BG', rating: 4.7 },
-    { key: 'drum_50', label: 'Drum 50"', price: 220, category: 'Barrels', icon: 'DR', rating: 4.8 },
-    { key: 'drum_53', label: 'Drum 53"', price: 280, category: 'Barrels', icon: 'DR', rating: 4.8 },
-    { key: 'pickup_small', label: 'Pickup the Box', price: 20, category: 'Travel', icon: 'PK', rating: 4.5 },
-    { key: 'large_cooler', label: 'Large Cooler', price: 80, category: 'Travel', icon: 'CL', rating: 4.5 },
-    { key: 'sedan_vehicle', label: 'Sedan Vehicle', price: 2700, category: 'Vehicles', icon: 'VH', rating: 4.9 },
-    { key: 'suv_vehicle', label: 'SUV Vehicle', price: 3000, category: 'Vehicles', icon: 'VH', rating: 4.9 },
-    { key: 'big_suv_4x4', label: 'Big SUV 4x4', price: 3500, category: 'Vehicles', icon: 'VH', rating: 4.9 }
+    { key: 'small_box', label: 'Small Box (16x12x12)', price: 50, category: 'Boxes', icon: 'BX', rating: 4.8, image: 'assets/services/small_box.png' },
+    { key: 'medium_box', label: 'Medium Box (18x18x16)', price: 80, category: 'Boxes', icon: 'BX', rating: 4.9, image: 'assets/services/medium_box.png' },
+    { key: 'large_small_box', label: 'Large (Small) Box (18x18x24)', price: 100, category: 'Boxes', icon: 'BX', rating: 4.8, image: 'assets/services/large_small_box.png' },
+    { key: 'large_box', label: 'Large Box (24x18x24)', price: 120, category: 'Boxes', icon: 'BX', rating: 4.9, image: 'assets/services/large_box.png' },
+    { key: 'xlarge_box', label: 'XLarge Box (24x18x24)', price: 150, category: 'Boxes', icon: 'BX', rating: 4.7, image: 'assets/services/xlarge_box.png' },
+    { key: 'xxlarge_box', label: 'XXLarge Box (18x21x16)', price: 200, category: 'Boxes', icon: 'BX', rating: 4.7, image: 'assets/services/xxlarge_box.png' },
+    { key: 'suitcase_medium', label: 'Suitcase Medium', price: 50, category: 'Travel', icon: 'BG', rating: 4.6, image: 'assets/services/suitcase_medium.png' },
+    { key: 'suitcase_large', label: 'Suitcase Large', price: 80, category: 'Travel', icon: 'BG', rating: 4.7, image: 'assets/services/suitcase_large.png' },
+    { key: 'drum_50', label: 'Drum 50"', price: 220, category: 'Barrels', icon: 'DR', rating: 4.8, image: 'assets/services/drum_50.png' },
+    { key: 'drum_53', label: 'Drum 53"', price: 280, category: 'Barrels', icon: 'DR', rating: 4.8, image: 'assets/services/drum_53.png' },
+    { key: 'pickup_small', label: 'Pickup the Box', price: 20, category: 'Travel', icon: 'PK', rating: 4.5, image: 'assets/services/pickup_small.png' },
+    { key: 'large_cooler', label: 'Large Cooler', price: 80, category: 'Travel', icon: 'CL', rating: 4.5, image: 'assets/services/large_cooler.png' },
+    { key: 'sedan_vehicle', label: 'Sedan Vehicle', price: 2700, category: 'Vehicles', icon: 'VH', rating: 4.9, image: 'assets/services/sedan_vehicle.png' },
+    { key: 'suv_vehicle', label: 'SUV Vehicle', price: 3000, category: 'Vehicles', icon: 'VH', rating: 4.9, image: 'assets/services/suv_vehicle.png' },
+    { key: 'big_suv_4x4', label: 'Big SUV 4x4', price: 3500, category: 'Vehicles', icon: 'VH', rating: 4.9, image: 'assets/services/big_suv_4x4.png' }
 ];
 
 const serviceShopTabs = ['All', 'Boxes', 'Travel', 'Barrels', 'Vehicles'];
@@ -487,13 +487,25 @@ function ServicesPage({ copy }) {
                     ))}
                 </div>
 
+                <p className="service-image-note">Item images are loaded from <strong>ALKASH/public/assets/services/</strong>.</p>
+
                 <div className="service-track" role="list">
                     {visibleItems.map((item) => {
                         const comparePrice = Math.round(item.price * 1.35);
                         const savings = comparePrice - item.price;
                         return (
                             <article className="shop-card" role="listitem" key={item.key}>
-                                <div className="shop-thumb" aria-hidden="true">{item.icon}</div>
+                                <div className="shop-thumb" data-missing="false">
+                                    <img
+                                        src={getAssetHref(item.image)}
+                                        alt={item.label}
+                                        loading="lazy"
+                                        onError={(event) => {
+                                            event.currentTarget.parentElement?.setAttribute('data-missing', 'true');
+                                        }}
+                                    />
+                                    <span className="shop-thumb-fallback" aria-hidden="true">{item.icon}</span>
+                                </div>
                                 <h3>{item.label}</h3>
                                 <p className="shop-rating">{'★'.repeat(5)} <span>{item.rating.toFixed(1)}</span></p>
                                 <div className="shop-price-line">
