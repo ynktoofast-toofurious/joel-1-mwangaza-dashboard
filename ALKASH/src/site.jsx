@@ -337,8 +337,14 @@ function HomeAnnouncementCarousel() {
 
     useEffect(() => {
         try {
+            const now = new Date();
             const stored = JSON.parse(localStorage.getItem('announcements') || '[]');
-            const activeSlides = stored.filter((item) => item.active);
+            const activeSlides = stored.filter((item) => {
+                if (!item.active) return false;
+                if (item.startDate && new Date(item.startDate) > now) return false;
+                if (item.endDate && new Date(item.endDate) < now) return false;
+                return true;
+            });
             setSlides(activeSlides);
         } catch {
             setSlides([]);

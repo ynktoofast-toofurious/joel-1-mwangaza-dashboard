@@ -1,7 +1,7 @@
 // Dashboard Components for Alkash-Trans Admin Portal
 // Includes Sidebar, Inventory, Announcements, and SEO management
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { uploadToS3, archiveAnnouncementToS3 } from './s3-utils.js';
 
 const sidebarSections = [
@@ -228,37 +228,127 @@ export function InventoryPage({ quoteBuilderItems, session, getServiceImageHref 
 }
 
 /**
+ * Mini carousel preview (same logic as homepage)
+ */
+function AnnouncementPreview({ slides }) {
+    const active = slides.filter(s => s.active);
+    const [idx, setIdx] = useState(0);
+
+    useEffect(() => {
+        if (active.length <= 1) return;
+        const t = setInterval(() => setIdx(p => (p + 1) % active.length), 3500);
+        return () => clearInterval(t);
+    }, [active.length]);
+
+    if (!active.length) {
+        return (
+            <div className="ann-preview-empty">
+                No active slides — activate at least one to see a preview.
+            </div>
+        );
+    }
+
+    const slide = active[idx % active.length];
+    const isImg = slide.slideType === 'image' && slide.imageUrl;
+    const bgStyle = slide.backgroundStyle || 'brand-wave';
+    const customUrl = slide.customBackgroundUrl || '';
+
+    const inlineStyle = bgStyle === 'custom-image' && customUrl
+        ? { backgroundImage: `linear-gradient(90deg,rgba(9,27,52,.55),rgba(9,27,52,.25)),url(${customUrl})` }
+        : undefined;
+
+    return (
+        <div className="ann-preview-wrap">
+            <div className="ann-preview-label">Homepage Preview</div>
+            <div className={`announcement-carousel-slide ${bgStyle} ann-preview-slide`} style={inlineStyle}>
+                {isImg && <img src={slide.imageUrl} alt={slide.title} className="announcement-carousel-image" />}
+                <div className="announcement-carousel-overlay">
+                    <p className="announcement-carousel-kicker">Latest Announcement</p>
+                    <h2>{slide.title || 'Announcement'}</h2>
+                    {slide.content && <p>{slide.content}</p>}
+                </div>
+            </div>
+            {active.length > 1 && (
+                <div className="announcement-carousel-dots">
+                    {active.map((_, i) => (
+                        <button key={i} className={`announcement-carousel-dot${i === idx % active.length ? ' active' : ''}`} onClick={() => setIdx(i)} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/**
  * Announcements Management
  */
 export function AnnouncementsPage({ session }) {
+    const STORAGE_KEY = 'announcements';
     const [announcements, setAnnouncements] = useState(() => {
-        const saved = localStorage.getItem('announcements');
-        return saved ? JSON.parse(saved) : [];
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+        catch { return []; }
     });
 
-    const [formData, setFormData] = useState({
-        title: '',
-        content: '',
-        active: true,
+    const emptyForm = {
+        title: '', content: '', active: true,
         slideType: 'text',
         backgroundStyle: 'brand-wave',
         customBackgroundUrl: '',
-        imageUrl: ''
-    });
+        imageUrl: '',
+        startDate: '',
+        endDate: ''
+    };
+    const [formData, setFormData] = useState({ ...emptyForm });
     const [bannerFile, setBannerFile] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [formMessage, setFormMessage] = useState('');
+    const [showPreview, setShowPreview] = useState(false);
+
+    /* drag state */
+    const dragItem = useRef(null);
+    const dragOver = useRef(null);
 
     const brandedBackgrounds = [
-        { value: 'brand-wave', label: 'ALKASH Wave (Light)' },
+        { value: 'brand-wave', label: 'ALKASH Wave (Blue)' },
         { value: 'brand-navy', label: 'ALKASH Navy Gradient' },
         { value: 'brand-sky', label: 'ALKASH Sky Blue' },
-        { value: 'custom-image', label: 'Custom Background Image URL' }
+        { value: 'custom-image', label: 'Custom Background URL' }
     ];
 
+    function save(updated) {
+        setAnnouncements(updated);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    }
+
+    /* ── drag-and-drop handlers ── */
+    function onDragStart(e, index) {
+        dragItem.current = index;
+        e.currentTarget.classList.add('dragging');
+    }
+
+    function onDragEnter(e, index) {
+        dragOver.current = index;
+        e.preventDefault();
+    }
+
+    function onDragEnd(e) {
+        e.currentTarget.classList.remove('dragging');
+        if (dragItem.current === null || dragOver.current === null || dragItem.current === dragOver.current) {
+            dragItem.current = null;
+            dragOver.current = null;
+            return;
+        }
+        const reordered = [...announcements];
+        const [moved] = reordered.splice(dragItem.current, 1);
+        reordered.splice(dragOver.current, 0, moved);
+        dragItem.current = null;
+        dragOver.current = null;
+        save(reordered);
+    }
+
+    /* ── form submit ── */
     async function handleAddAnnouncement(e) {
         e.preventDefault();
-
         setIsSaving(true);
         setFormMessage('');
 
@@ -266,16 +356,13 @@ export function AnnouncementsPage({ session }) {
 
         if (formData.slideType === 'image' && bannerFile) {
             const safeName = bannerFile.name.replace(/\s+/g, '-').toLowerCase();
-            const uploadPath = `announcements/banners/${Date.now()}-${safeName}`;
-            const uploadResult = await uploadToS3(bannerFile, uploadPath);
-
-            if (!uploadResult.success) {
-                setFormMessage(`Upload failed: ${uploadResult.error || 'unknown error'}`);
+            const res = await uploadToS3(bannerFile, `announcements/banners/${Date.now()}-${safeName}`);
+            if (!res.success) {
+                setFormMessage(`Upload failed: ${res.error || 'unknown error'}`);
                 setIsSaving(false);
                 return;
             }
-
-            uploadedImageUrl = uploadResult.url || '';
+            uploadedImageUrl = res.url || '';
         }
 
         if (formData.slideType === 'image' && !uploadedImageUrl) {
@@ -284,7 +371,7 @@ export function AnnouncementsPage({ session }) {
             return;
         }
 
-        const newAnnouncement = {
+        const newSlide = {
             id: Date.now(),
             title: formData.title.trim(),
             content: formData.content.trim(),
@@ -293,38 +380,37 @@ export function AnnouncementsPage({ session }) {
             backgroundStyle: formData.backgroundStyle,
             customBackgroundUrl: formData.customBackgroundUrl.trim(),
             imageUrl: uploadedImageUrl,
+            startDate: formData.startDate || null,
+            endDate: formData.endDate || null,
             createdBy: session?.name || 'Admin',
             createdAt: new Date().toISOString()
         };
 
-        // Archive to S3
-        await archiveAnnouncementToS3(newAnnouncement);
-
-        // Update local state
-        const updated = [...announcements, newAnnouncement];
-        setAnnouncements(updated);
-        localStorage.setItem('announcements', JSON.stringify(updated));
-
-        // Reset form
-        setFormData({
-            title: '',
-            content: '',
-            active: true,
-            slideType: 'text',
-            backgroundStyle: 'brand-wave',
-            customBackgroundUrl: '',
-            imageUrl: ''
-        });
+        await archiveAnnouncementToS3(newSlide);
+        save([...announcements, newSlide]);
+        setFormData({ ...emptyForm });
         setBannerFile(null);
         setFormMessage('Announcement slide added successfully.');
         setIsSaving(false);
     }
 
-    function handleDeleteAnnouncement(id) {
-        const updated = announcements.filter(a => a.id !== id);
-        setAnnouncements(updated);
-        localStorage.setItem('announcements', JSON.stringify(updated));
+    function toggleActive(id) {
+        save(announcements.map(a => a.id === id ? { ...a, active: !a.active } : a));
     }
+
+    function handleDelete(id) {
+        save(announcements.filter(a => a.id !== id));
+    }
+
+    /* ── schedule status helper ── */
+    function scheduleStatus(slide) {
+        const now = new Date();
+        if (slide.startDate && new Date(slide.startDate) > now) return 'scheduled';
+        if (slide.endDate && new Date(slide.endDate) < now) return 'expired';
+        return slide.active ? 'live' : 'inactive';
+    }
+
+    const statusColor = { live: '#15803d', scheduled: '#b45309', expired: '#dc2626', inactive: '#6b7280' };
 
     return (
         <div className="dash-page">
@@ -333,158 +419,151 @@ export function AnnouncementsPage({ session }) {
                 <span className="dash-breadcrumb-sep">›</span>
                 <span className="dash-breadcrumb-current">Announcements</span>
             </div>
-            <div className="dash-page-header">
-                <h2 className="dash-page-title">Announcements</h2>
-                <p className="dash-page-sub">Published announcements appear on the home page. All data archived to S3.</p>
+            <div className="dash-page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                    <h2 className="dash-page-title">Announcements</h2>
+                    <p className="dash-page-sub">Drag rows to reorder · Set dates to schedule · Preview before publishing.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setShowPreview(p => !p)}
+                    style={{ background: showPreview ? 'var(--navy)' : '#f3f4f6', color: showPreview ? '#fff' : 'var(--navy)', border: '1px solid #d1d5db', borderRadius: 'var(--radius-sm)', padding: '0.55rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+                >
+                    {showPreview ? '✕ Close Preview' : '👁 Preview Carousel'}
+                </button>
             </div>
+
+            {showPreview && <AnnouncementPreview slides={announcements} />}
+
         <div className="dashboard-panel announcements-panel">
 
             <div className="announcement-form">
-                <h3>Create New Announcement</h3>
+                <h3>New Slide</h3>
                 <form onSubmit={handleAddAnnouncement}>
-                    {formMessage ? <div className="message success">{formMessage}</div> : null}
+                    {formMessage && <div className="message success">{formMessage}</div>}
 
-                    <label>
-                        <span>Slide Type</span>
-                        <select
-                            value={formData.slideType}
-                            onChange={(e) => setFormData({ ...formData, slideType: e.target.value })}
-                        >
-                            <option value="text">Text Banner</option>
-                            <option value="image">Image Banner</option>
-                        </select>
-                    </label>
+                    <div className="ann-form-row">
+                        <label style={{ flex: 1 }}>
+                            <span>Slide Type</span>
+                            <select value={formData.slideType} onChange={e => setFormData({ ...formData, slideType: e.target.value })}>
+                                <option value="text">Text Banner</option>
+                                <option value="image">Image Banner</option>
+                            </select>
+                        </label>
+                        <label style={{ flex: 2 }}>
+                            <span>Title</span>
+                            <input type="text" placeholder="Slide title" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required />
+                        </label>
+                    </div>
 
-                    <label>
-                        <span>Announcement Title</span>
-                        <input
-                            type="text"
-                            placeholder="Enter announcement title"
-                            value={formData.title}
-                            onChange={(e) => setFormData({...formData, title: e.target.value})}
-                            required
-                        />
-                    </label>
                     <label>
                         <span>Content / Caption</span>
-                        <textarea
-                            placeholder="Enter announcement message"
-                            rows="4"
-                            value={formData.content}
-                            onChange={(e) => setFormData({...formData, content: e.target.value})}
-                            required
-                        />
+                        <textarea placeholder="Announcement message" rows="3" value={formData.content} onChange={e => setFormData({ ...formData, content: e.target.value })} required />
                     </label>
 
                     {formData.slideType === 'text' ? (
-                        <>
-                            <label>
+                        <div className="ann-form-row">
+                            <label style={{ flex: 1 }}>
                                 <span>Background Preset</span>
-                                <select
-                                    value={formData.backgroundStyle}
-                                    onChange={(e) => setFormData({ ...formData, backgroundStyle: e.target.value })}
-                                >
-                                    {brandedBackgrounds.map(bg => (
-                                        <option key={bg.value} value={bg.value}>{bg.label}</option>
-                                    ))}
+                                <select value={formData.backgroundStyle} onChange={e => setFormData({ ...formData, backgroundStyle: e.target.value })}>
+                                    {brandedBackgrounds.map(bg => <option key={bg.value} value={bg.value}>{bg.label}</option>)}
                                 </select>
                             </label>
-
-                            {formData.backgroundStyle === 'custom-image' ? (
-                                <label>
+                            {formData.backgroundStyle === 'custom-image' && (
+                                <label style={{ flex: 2 }}>
                                     <span>Custom Background URL</span>
-                                    <input
-                                        type="url"
-                                        placeholder="https://..."
-                                        value={formData.customBackgroundUrl}
-                                        onChange={(e) => setFormData({ ...formData, customBackgroundUrl: e.target.value })}
-                                    />
+                                    <input type="url" placeholder="https://..." value={formData.customBackgroundUrl} onChange={e => setFormData({ ...formData, customBackgroundUrl: e.target.value })} />
                                 </label>
-                            ) : null}
-                        </>
+                            )}
+                        </div>
                     ) : (
-                        <>
-                            <label>
+                        <div className="ann-form-row">
+                            <label style={{ flex: 1 }}>
                                 <span>Upload Banner Image</span>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-                                />
+                                <input type="file" accept="image/*" onChange={e => setBannerFile(e.target.files?.[0] || null)} />
                             </label>
-
-                            <label>
+                            <label style={{ flex: 2 }}>
                                 <span>Or Banner Image URL</span>
-                                <input
-                                    type="url"
-                                    placeholder="https://..."
-                                    value={formData.imageUrl}
-                                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                                />
+                                <input type="url" placeholder="https://..." value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} />
                             </label>
-                        </>
+                        </div>
                     )}
 
+                    <div className="ann-form-row">
+                        <label style={{ flex: 1 }}>
+                            <span>Start Date (optional)</span>
+                            <input type="datetime-local" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} />
+                        </label>
+                        <label style={{ flex: 1 }}>
+                            <span>End Date (optional)</span>
+                            <input type="datetime-local" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} />
+                        </label>
+                    </div>
+
                     <label className="checkbox-label">
-                        <input
-                            type="checkbox"
-                            checked={formData.active}
-                            onChange={(e) => setFormData({...formData, active: e.target.checked})}
-                        />
-                        <span>Display on home page (Active)</span>
+                        <input type="checkbox" checked={formData.active} onChange={e => setFormData({ ...formData, active: e.target.checked })} />
+                        <span>Publish immediately (Active)</span>
                     </label>
-                    <button type="submit" disabled={isSaving} style={{ 
-                        backgroundColor: 'var(--blue)', 
-                        color: 'white', 
-                        padding: '0.75rem 1rem',
-                        borderRadius: 'var(--radius-sm)',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: '600'
-                    }}>
-                        {isSaving ? 'Saving...' : 'Create Announcement'}
+
+                    <button type="submit" disabled={isSaving} className="ann-submit-btn">
+                        {isSaving ? 'Saving…' : '+ Add Slide'}
                     </button>
                 </form>
             </div>
 
             <div className="announcements-list">
-                <h3>Existing Announcements</h3>
-                {announcements.length === 0 ? (
-                    <div className="empty-state">No announcements yet. Create one to get started!</div>
+                <h3>Slides ({announcements.length}) — drag to reorder</h3>
+                {!announcements.length ? (
+                    <div className="empty-state">No slides yet. Create one above.</div>
                 ) : (
                     <div className="announcement-items-container">
-                        {announcements.map(announcement => (
-                            <div key={announcement.id} className="announcement-item">
-                                <div className="announcement-header">
-                                    <div>
-                                        <h4>{announcement.title}</h4>
-                                        <p>{announcement.content}</p>
-                                        <p className="creator">Type: {announcement.slideType || 'text'}</p>
+                        {announcements.map((slide, index) => {
+                            const status = scheduleStatus(slide);
+                            return (
+                                <div
+                                    key={slide.id}
+                                    className="announcement-item ann-drag-item"
+                                    draggable
+                                    onDragStart={e => onDragStart(e, index)}
+                                    onDragEnter={e => onDragEnter(e, index)}
+                                    onDragEnd={onDragEnd}
+                                    onDragOver={e => e.preventDefault()}
+                                >
+                                    <span className="ann-drag-handle" title="Drag to reorder">⠿</span>
+                                    <div className="ann-item-body">
+                                        <div className="announcement-header">
+                                            <div>
+                                                <h4>{slide.title}</h4>
+                                                <p>{slide.content}</p>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleActive(slide.id)}
+                                                    style={{ background: slide.active ? '#dcfce7' : '#f3f4f6', color: slide.active ? '#15803d' : '#6b7280', border: 'none', padding: '0.35rem 0.7rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                                                >
+                                                    {slide.active ? 'Active' : 'Inactive'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDelete(slide.id)}
+                                                    style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '0.35rem 0.7rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="announcement-meta">
+                                            <span className="status-badge" style={{ background: statusColor[status] + '22', color: statusColor[status] }}>{status}</span>
+                                            <span className="creator">{slide.slideType || 'text'}</span>
+                                            {slide.startDate && <span className="creator">From: {new Date(slide.startDate).toLocaleDateString()}</span>}
+                                            {slide.endDate && <span className="creator">Until: {new Date(slide.endDate).toLocaleDateString()}</span>}
+                                            <span className="creator">By: {slide.createdBy}</span>
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={() => handleDeleteAnnouncement(announcement.id)}
-                                        style={{
-                                            backgroundColor: '#fee2e2',
-                                            color: '#dc2626',
-                                            border: 'none',
-                                            padding: '0.5rem 1rem',
-                                            borderRadius: 'var(--radius-sm)',
-                                            cursor: 'pointer',
-                                            fontWeight: '600'
-                                        }}
-                                    >
-                                        Delete
-                                    </button>
                                 </div>
-                                <div className="announcement-meta">
-                                    <span className={`status-badge ${announcement.active ? 'active' : 'inactive'}`}>
-                                        {announcement.active ? 'Active' : 'Inactive'}
-                                    </span>
-                                    <span className="creator">By: {announcement.createdBy}</span>
-                                    <span>{new Date(announcement.createdAt).toLocaleDateString()}</span>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

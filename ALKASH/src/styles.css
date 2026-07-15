@@ -1144,6 +1144,82 @@ select {
 
     .creator { color: #9ca3af; }
 
+    /* ─── Announcement form layout helpers ─── */
+    .ann-form-row {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .ann-form-row label { min-width: 160px; }
+
+    .ann-submit-btn {
+        background: var(--blue);
+        color: #fff;
+        border: none;
+        padding: 0.7rem 1.25rem;
+        border-radius: var(--radius-sm);
+        font-weight: 700;
+        font-size: 0.88rem;
+        cursor: pointer;
+        align-self: flex-start;
+        transition: opacity 0.15s;
+    }
+
+    .ann-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ─── Drag-and-drop list ─── */
+    .ann-drag-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        cursor: default;
+        transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .ann-drag-item.dragging { opacity: 0.45; transform: scale(0.98); }
+
+    .ann-drag-handle {
+        font-size: 1.15rem;
+        color: #9ca3af;
+        cursor: grab;
+        padding-top: 0.2rem;
+        line-height: 1;
+        user-select: none;
+        flex-shrink: 0;
+    }
+
+    .ann-item-body { flex: 1; min-width: 0; }
+
+    /* ─── Admin preview panel ─── */
+    .ann-preview-wrap {
+        margin-bottom: 1.25rem;
+    }
+
+    .ann-preview-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+    }
+
+    .ann-preview-slide {
+        min-height: 160px !important;
+        border-radius: 12px !important;
+    }
+
+    .ann-preview-empty {
+        background: #f9fafb;
+        border: 1px dashed #d1d5db;
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        text-align: center;
+        color: #9ca3af;
+        font-size: 0.875rem;
+    }
+
     /* ─── Home announcement carousel ─── */
     .announcement-carousel-wrap {
         background: #f8fafc;
