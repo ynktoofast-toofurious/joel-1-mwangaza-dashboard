@@ -314,9 +314,9 @@ function Header({ copy, pageKey, language, setLanguage, session, onLogout }) {
     );
 }
 
-function PageFrame({ eyebrow, title, intro, children }) {
+function PageFrame({ eyebrow, title, intro, children, compact = false }) {
     return (
-        <main className="page-shell page-enter">
+        <main className={`page-shell page-enter${compact ? ' compact' : ''}`}>
             <section className="page-hero">
                 <div className="container page-hero-inner">
                     {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
@@ -970,7 +970,7 @@ function AdminDashboardPage({ session }) {
     }
 
     return (
-        <PageFrame eyebrow="Admin" title="Platform Dashboard" intro="Manage inventory, announcements, and SEO settings from one compact view.">
+        <PageFrame compact eyebrow="Admin" title="Platform Dashboard" intro="Manage inventory, announcements, and SEO settings from one compact view.">
             <div className="admin-dashboard-layout">
                 <DashboardSidebar activeTab={activeTab} onTabChange={setActiveTab} session={session} />
                 <main className="dashboard-main">

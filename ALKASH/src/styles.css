@@ -1689,6 +1689,30 @@ select {
     padding: 4.6rem 0 3rem;
 }
 
+.page-shell.compact .page-hero-inner {
+    padding: 1.5rem 0 1.25rem;
+}
+
+.page-shell.compact .eyebrow {
+    margin: 0 0 0.45rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+}
+
+.page-shell.compact .page-title {
+    font-size: clamp(1.9rem, 3.2vw, 2.95rem);
+    max-width: 22ch;
+}
+
+.page-shell.compact .page-intro {
+    margin-top: 0.7rem;
+    max-width: 52ch;
+}
+
+.page-shell.compact .page-content {
+    padding: 1.25rem 0 2rem;
+}
+
 .schedule-table-wrapper {
     overflow-x: auto;
     padding: 0;
