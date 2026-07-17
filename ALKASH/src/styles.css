@@ -2425,6 +2425,187 @@ select {
     color: #60a5fa;
     font-size: 0.75rem;
 }
+
+/* ────────────────────────────────────────── */
+/* Edit Mode UI Styles */
+/* ────────────────────────────────────────── */
+
+.edit-mode-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    background: linear-gradient(135deg, #42b0d5 0%, #1d6f95 100%);
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(66, 176, 213, 0.3);
+    transition: all 0.2s;
+}
+
+.edit-mode-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(66, 176, 213, 0.4);
+}
+
+.edit-mode-indicator {
+    display: inline-block;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.edit-hover-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: linear-gradient(135deg, #42b0d5 0%, #1d6f95 100%);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    z-index: 50;
+    opacity: 0;
+    animation: fadeIn 0.2s ease-in forwards;
+    box-shadow: 0 4px 12px rgba(66, 176, 213, 0.3);
+}
+
+.edit-hover-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(66, 176, 213, 0.4);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.quick-edit-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 1rem;
+    animation: fadeIn 0.2s ease-in;
+}
+
+.quick-edit-modal {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(16, 35, 64, 0.2);
+    max-height: 85vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.quick-edit-modal h3 {
+    margin: 0 0 1.5rem;
+    color: var(--navy);
+    font-size: 1.25rem;
+}
+
+.quick-edit-modal label {
+    display: block;
+    margin-bottom: 1.2rem;
+}
+
+.quick-edit-modal label span {
+    display: block;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.quick-edit-modal input,
+.quick-edit-modal textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--ink);
+}
+
+.quick-edit-modal input:focus,
+.quick-edit-modal textarea:focus {
+    outline: 2px solid rgba(66, 176, 213, 0.3);
+    border-color: var(--blue-deep);
+}
+
+.quick-edit-modal textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.quick-edit-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.quick-edit-save,
+.quick-edit-cancel {
+    flex: 1;
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-edit-save {
+    background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+    color: white;
+}
+
+.quick-edit-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(21, 128, 61, 0.3);
+}
+
+.quick-edit-cancel {
+    background: #f3f4f6;
+    color: var(--navy);
+    border: 1px solid #d1d5db;
+}
+
+.quick-edit-cancel:hover {
+    background: #e5e7eb;
+}
     font-weight: 600;
 }
 

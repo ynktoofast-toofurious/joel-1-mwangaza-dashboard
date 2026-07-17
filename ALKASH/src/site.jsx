@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { trackingData, translations } from './content.js';
 import { getAssetHref, getMaskedHref } from './routes.js';
+import { EditModeProvider } from './edit-context.jsx';
+import { EditModeToggle, EditableContent, AnnouncementQuickEdit } from './edit-components.jsx';
 import {
     addSupportCase,
     clearSession,
@@ -208,6 +210,11 @@ function Header({ copy, pageKey, language, setLanguage, session, onLogout }) {
     return (
         <header className="site-header">
             <div className="container header-top-row">
+                {session && isAdminRole(session.role) && (
+                    <div style={{ position: 'absolute', left: '1rem', top: '0.8rem' }}>
+                        <EditModeToggle />
+                    </div>
+                )}
                 <a className="brand" href={getMaskedHref('home')}>
                     <img src={getAssetHref('Logo/logo-1.png')} alt="Alkash-Trans logo" />
                     <div>
@@ -334,6 +341,7 @@ function PageFrame({ eyebrow, title, intro, children, compact = false }) {
 function HomeAnnouncementCarousel() {
     const [slides, setSlides] = useState([]);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [editingSlide, setEditingSlide] = useState(null);
 
     useEffect(() => {
         try {
@@ -350,6 +358,22 @@ function HomeAnnouncementCarousel() {
             setSlides([]);
         }
     }, []);
+
+    function handleSaveSlide(updatedSlide) {
+        const stored = JSON.parse(localStorage.getItem('announcements') || '[]');
+        const updated = stored.map(s => s.id === updatedSlide.id ? updatedSlide : s);
+        localStorage.setItem('announcements', JSON.stringify(updated));
+        
+        const now = new Date();
+        const activeSlides = updated.filter((item) => {
+            if (!item.active) return false;
+            if (item.startDate && new Date(item.startDate) > now) return false;
+            if (item.endDate && new Date(item.endDate) < now) return false;
+            return true;
+        });
+        setSlides(activeSlides);
+        setEditingSlide(null);
+    }
 
     useEffect(() => {
         if (slides.length <= 1) {
@@ -378,23 +402,30 @@ function HomeAnnouncementCarousel() {
         : undefined;
 
     return (
+        <>
         <section className="announcement-carousel-wrap">
             <div className="container">
-                <div className={sectionClass} style={style}>
-                    {isImageSlide ? (
-                        <img
-                            src={activeSlide.imageUrl}
-                            alt={activeSlide.title || 'Announcement banner'}
-                            className="announcement-carousel-image"
-                        />
-                    ) : null}
+                <EditableContent
+                    id={activeSlide.id}
+                    type="announcement"
+                    onEdit={() => setEditingSlide(activeSlide)}
+                >
+                    <div className={sectionClass} style={style}>
+                        {isImageSlide ? (
+                            <img
+                                src={activeSlide.imageUrl}
+                                alt={activeSlide.title || 'Announcement banner'}
+                                className="announcement-carousel-image"
+                            />
+                        ) : null}
 
-                    <div className="announcement-carousel-overlay">
-                        <p className="announcement-carousel-kicker">Latest Announcement</p>
-                        <h2>{activeSlide.title || 'Announcement'}</h2>
-                        {activeSlide.content ? <p>{activeSlide.content}</p> : null}
+                        <div className="announcement-carousel-overlay">
+                            <p className="announcement-carousel-kicker">Latest Announcement</p>
+                            <h2>{activeSlide.title || 'Announcement'}</h2>
+                            {activeSlide.content ? <p>{activeSlide.content}</p> : null}
+                        </div>
                     </div>
-                </div>
+                </EditableContent>
 
                 {slides.length > 1 ? (
                     <div className="announcement-carousel-dots">
@@ -410,6 +441,14 @@ function HomeAnnouncementCarousel() {
                 ) : null}
             </div>
         </section>
+        {editingSlide && (
+            <AnnouncementQuickEdit
+                slide={editingSlide}
+                onSave={handleSaveSlide}
+                onCancel={() => setEditingSlide(null)}
+            />
+        )}
+        </>
     );
 }
 
@@ -1189,5 +1228,11 @@ function SiteApp({ pageKey }) {
 }
 
 export function renderPageApp(pageKey) {
-    return <SiteApp pageKey={pageKey} />;
+    const app = <SiteApp pageKey={pageKey} />;
+    const session = getSession();
+    return (
+        <EditModeProvider isLoggedIn={session && isAdminRole(session.role)}>
+            {app}
+        </EditModeProvider>
+    );
 }
