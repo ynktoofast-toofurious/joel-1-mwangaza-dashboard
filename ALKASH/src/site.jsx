@@ -184,7 +184,7 @@ function lookupTracking(reference, language) {
         return { key: 'missing' };
     }
 
-    return { key: 'found', record: item[language] };
+    return { key: 'found', record: { ...item[language], journey: item.journey } };
 }
 
 function useLanguage() {
