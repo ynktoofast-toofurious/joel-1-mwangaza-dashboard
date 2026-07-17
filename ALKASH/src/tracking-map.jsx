@@ -1,6 +1,37 @@
 import { useState, useEffect } from 'react';
 
 /**
+ * SVG Icon Components
+ */
+function MapIcon() {
+    return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 2v20M2 12h20"/></svg>;
+}
+
+function CloseIcon() {
+    return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+}
+
+function CheckmarkIcon() {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>;
+}
+
+function CircleIcon() {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2"/></svg>;
+}
+
+function OriginIcon() {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>;
+}
+
+function TransitIcon() {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 9v2a2 2 0 0 1-2 2h-2M3 9v2a2 2 0 0 0 2 2h2M9 5a2 2 0 1 1 6 0M3 13v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/></svg>;
+}
+
+function DestinationIcon() {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><circle cx="12" cy="9" r="3"/></svg>;
+}
+
+/**
  * TrackingMap - Interactive map showing shipment journey with animated current location
  * @param {Object} trackingData - Journey data with stages and coordinates
  * @param {string} language - 'en' or 'fr' for labels
@@ -69,8 +100,8 @@ export function TrackingMap({ trackingData, language = 'en', onClose }) {
         <div className="tracking-map-overlay" onClick={onClose}>
             <div className="tracking-map-modal" onClick={e => e.stopPropagation()}>
                 <div className="tracking-map-header">
-                    <h2>📍 Shipment Journey Map</h2>
-                    <button className="tracking-map-close" onClick={onClose}>✕</button>
+                    <h2><MapIcon /> Shipment Journey Map</h2>
+                    <button className="tracking-map-close" onClick={onClose}><CloseIcon /></button>
                 </div>
 
                 <div className="tracking-map-container">
@@ -208,15 +239,21 @@ export function TrackingMap({ trackingData, language = 'en', onClose }) {
                     <div className="journey-timeline">
                         {trackingData.journey.map((journey, idx) => (
                             <div key={idx} className={`timeline-item ${journey.stage} ${journey.completed ? 'completed' : ''}`}>
-                                <div className="timeline-marker"></div>
+                                <div className="timeline-marker">
+                                    {journey.stage === 'current' && <CircleIcon />}
+                                    {journey.stage === 'origin' && <OriginIcon />}
+                                    {journey.stage === 'destination' && <DestinationIcon />}
+                                    {journey.stage === 'transit' && <TransitIcon />}
+                                    {journey.completed && journey.stage !== 'current' && <CheckmarkIcon />}
+                                </div>
                                 <div className="timeline-content">
                                     <h4>{journey.name[language] || journey.name.en}</h4>
                                     <p className="timeline-date">{journey.date}</p>
                                     <p className="timeline-status">
-                                        {journey.stage === 'current' && '📍 Current Location'}
-                                        {journey.stage === 'origin' && '📦 Origin'}
-                                        {journey.stage === 'destination' && '🎯 Destination'}
-                                        {journey.stage === 'transit' && '🚢 In Transit'}
+                                        {journey.stage === 'current' && 'Current Location'}
+                                        {journey.stage === 'origin' && 'Origin'}
+                                        {journey.stage === 'destination' && 'Destination'}
+                                        {journey.stage === 'transit' && 'In Transit'}
                                     </p>
                                 </div>
                             </div>

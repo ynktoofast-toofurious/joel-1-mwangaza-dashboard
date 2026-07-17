@@ -456,17 +456,21 @@ function HomeAnnouncementCarousel() {
 function HomePage({ copy, language }) {
     const [quickReference, setQuickReference] = useState('');
     const [quickResult, setQuickResult] = useState(null);
+    const [quickResultData, setQuickResultData] = useState(null);
+    const [showQuickMap, setShowQuickMap] = useState(false);
 
     function handleQuickTrack() {
         const result = lookupTracking(quickReference, language);
 
         if (result.key === 'empty') {
             setQuickResult({ message: copy.tracking.empty });
+            setQuickResultData(null);
             return;
         }
 
         if (result.key === 'missing') {
             setQuickResult({ message: copy.tracking.missing });
+            setQuickResultData(null);
             return;
         }
 
@@ -475,6 +479,13 @@ function HomePage({ copy, language }) {
             message: result.record.message,
             detail: result.record.detail
         });
+        setQuickResultData(result.record);
+    }
+
+    function handleViewQuickMap() {
+        if (quickResultData) {
+            setShowQuickMap(true);
+        }
     }
 
     return (
@@ -512,6 +523,10 @@ function HomePage({ copy, language }) {
                                         <h2>{quickResult.title}</h2>
                                         <p>{quickResult.message}</p>
                                         <p>{quickResult.detail}</p>
+                                        <button className="button button-primary tracking-map-btn" onClick={handleViewQuickMap}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display: 'inline-block', marginRight: '0.5rem'}}><circle cx="12" cy="12" r="9"/><path d="M12 2v20M2 12h20"/><path d="M12 6v12M6 12h12"/></svg>
+                                            View Shipment Map
+                                        </button>
                                     </>
                                 ) : <p>{quickResult?.message || copy.tracking.helper}</p>}
                             </div>
@@ -554,6 +569,13 @@ function HomePage({ copy, language }) {
                     </article>
                 </div>
             </section>
+            {showQuickMap && quickResultData && (
+                <TrackingMap
+                    trackingData={quickResultData}
+                    language={language}
+                    onClose={() => setShowQuickMap(false)}
+                />
+            )}
         </main>
     );
 }
@@ -837,13 +859,14 @@ function TrackingPage({ copy, language }) {
                     </div>
                 </label>
                 <div className="tracking-result">
-                    {result ? (
+                            {result ? (
                         <>
                             <h2>{result.title}</h2>
                             <p>{result.message}</p>
                             <p><strong>{copy.tracking.updateLabel}:</strong> {result.detail}</p>
                             <button className="button button-primary tracking-map-btn" onClick={handleViewMap}>
-                                📍 View Shipment Map
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display: 'inline-block', marginRight: '0.5rem'}}><circle cx="12" cy="12" r="9"/><path d="M12 2v20M2 12h20"/><path d="M12 6v12M6 12h12"/></svg>
+                                View Shipment Map
                             </button>
                         </>
                     ) : <p>{message}</p>}
@@ -859,6 +882,10 @@ function TrackingPage({ copy, language }) {
             )}
         </PageFrame>
     );
+}
+
+function QuickTrackingMapModal({ trackingData, language, onClose }) {
+    return <TrackingMap trackingData={trackingData} language={language} onClose={onClose} />;
 }
 
 function GalleryPage({ copy }) {

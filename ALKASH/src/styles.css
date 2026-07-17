@@ -2745,16 +2745,24 @@ select {
 .timeline-marker {
     flex: 0 0 12px;
     margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
 }
 
-.timeline-item.completed .timeline-marker::before {
-    content: '✓';
+.timeline-marker svg {
+    width: 16px;
+    height: 16px;
+    color: #9ca3af;
+}
+
+.timeline-item.completed .timeline-marker svg {
     color: #22c55e;
-    font-weight: 600;
 }
 
-.timeline-item.current .timeline-marker::before {
-    content: '●';
+.timeline-item.current .timeline-marker svg {
     color: #ef4444;
     animation: blink-pulse 1s ease-in-out infinite;
 }
@@ -2762,11 +2770,6 @@ select {
 @keyframes blink-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
-}
-
-.timeline-item:not(.completed):not(.current) .timeline-marker::before {
-    content: '◯';
-    color: #9ca3af;
 }
 
 .timeline-content h4 {
