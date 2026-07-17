@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { uploadToS3, archiveAnnouncementToS3 } from './s3-utils.js';
+import { processImage, saveImageToLibrary, getImageLibrary, deleteImageFromLibrary, incrementImageUsage } from './image-utils.js';
 
 const sidebarSections = [
     {
@@ -234,6 +235,146 @@ export function InventoryPage({ quoteBuilderItems, session, getServiceImageHref 
 }
 
 /**
+ * Image upload dialog with preview
+ */
+function ImageUploadDialog({ onImageReady, onCancel }) {
+    const [preview, setPreview] = useState(null);
+    const [message, setMessage] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const fileInputRef = useRef(null);
+
+    async function handleFileSelect(e) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsProcessing(true);
+        setMessage('');
+        const result = await processImage(file);
+
+        if (!result.success) {
+            setMessage(result.error);
+            setIsProcessing(false);
+            return;
+        }
+
+        setPreview({ base64: result.base64, name: file.name, size: result.size });
+        setIsProcessing(false);
+    }
+
+    function handleConfirm() {
+        if (!preview) return;
+        const imgId = saveImageToLibrary(preview.base64, preview.name);
+        onImageReady(preview.base64, imgId);
+        onCancel();
+    }
+
+    return (
+        <div className="img-upload-dialog">
+            <div className="img-upload-overlay" onClick={onCancel}></div>
+            <div className="img-upload-modal">
+                <button className="img-upload-close" onClick={onCancel}>✕</button>
+                <h3>Upload Banner Image</h3>
+
+                <div className="img-upload-area" onClick={() => fileInputRef.current?.click()}>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        hidden
+                    />
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p>Drop image here or click to select</p>
+                    <small>Max 2MB · JPG, PNG, WebP</small>
+                </div>
+
+                {message && <div className="message warning" style={{ margin: '0.75rem 0' }}>{message}</div>}
+
+                {preview && (
+                    <>
+                        <div className="img-preview">
+                            <img src={preview.base64} alt="preview" />
+                        </div>
+                        <div className="img-preview-info">
+                            <p><strong>{preview.name}</strong></p>
+                            <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>{Math.round(preview.size / 1024)}KB</p>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                            <button type="button" className="ann-submit-btn" onClick={handleConfirm}>
+                                Use This Image
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setPreview(null); fileInputRef.current?.click(); }}
+                                style={{ flex: 1, background: '#f3f4f6', color: 'var(--navy)', border: '1px solid #d1d5db', padding: '0.7rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                                Choose Different
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {!preview && !isProcessing && (
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{ marginTop: '1rem', width: '100%', background: 'var(--blue)', color: '#fff', border: 'none', padding: '0.7rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                        Select Image
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Image library/gallery browser
+ */
+function ImageGallery({ onSelect, onClose }) {
+    const [library] = useState(() => getImageLibrary());
+
+    if (!library.length) {
+        return (
+            <div className="img-gallery-modal">
+                <button className="img-upload-close" onClick={onClose} style={{ right: '1rem', top: '1rem' }}>✕</button>
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                    <p>No images in library yet. Upload your first image above.</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="img-gallery-modal">
+            <button className="img-upload-close" onClick={onClose} style={{ right: '1rem', top: '1rem' }}>✕</button>
+            <h3 style={{ margin: '0 0 1rem' }}>Image Library</h3>
+            <div className="img-gallery-grid">
+                {library.map(img => (
+                    <button
+                        key={img.id}
+                        className="img-gallery-item"
+                        onClick={() => { onSelect(img.data, img.id); onClose(); }}
+                        title={img.name}
+                    >
+                        <img src={img.data} alt={img.name} />
+                        <div className="img-gallery-info">
+                            <span className="img-gallery-name">{img.name}</span>
+                            <span className="img-gallery-usage">{img.usageCount || 0} uses</span>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/**
  * Mini carousel preview (same logic as homepage)
  */
 function AnnouncementPreview({ slides }) {
@@ -305,10 +446,11 @@ export function AnnouncementsPage({ session }) {
         endDate: ''
     };
     const [formData, setFormData] = useState({ ...emptyForm });
-    const [bannerFile, setBannerFile] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [formMessage, setFormMessage] = useState('');
     const [showPreview, setShowPreview] = useState(false);
+    const [showImageUpload, setShowImageUpload] = useState(false);
+    const [showImageGallery, setShowImageGallery] = useState(false);
 
     /* drag state */
     const dragItem = useRef(null);
@@ -358,21 +500,8 @@ export function AnnouncementsPage({ session }) {
         setIsSaving(true);
         setFormMessage('');
 
-        let uploadedImageUrl = formData.imageUrl || '';
-
-        if (formData.slideType === 'image' && bannerFile) {
-            const safeName = bannerFile.name.replace(/\s+/g, '-').toLowerCase();
-            const res = await uploadToS3(bannerFile, `announcements/banners/${Date.now()}-${safeName}`);
-            if (!res.success) {
-                setFormMessage(`Upload failed: ${res.error || 'unknown error'}`);
-                setIsSaving(false);
-                return;
-            }
-            uploadedImageUrl = res.url || '';
-        }
-
-        if (formData.slideType === 'image' && !uploadedImageUrl) {
-            setFormMessage('Please upload a banner image or provide an image URL.');
+        if (formData.slideType === 'image' && !formData.imageUrl) {
+            setFormMessage('Please select a banner image.');
             setIsSaving(false);
             return;
         }
@@ -385,7 +514,7 @@ export function AnnouncementsPage({ session }) {
             slideType: formData.slideType,
             backgroundStyle: formData.backgroundStyle,
             customBackgroundUrl: formData.customBackgroundUrl.trim(),
-            imageUrl: uploadedImageUrl,
+            imageUrl: formData.imageUrl, // Now base64
             startDate: formData.startDate || null,
             endDate: formData.endDate || null,
             createdBy: session?.name || 'Admin',
@@ -395,8 +524,7 @@ export function AnnouncementsPage({ session }) {
         await archiveAnnouncementToS3(newSlide);
         save([...announcements, newSlide]);
         setFormData({ ...emptyForm });
-        setBannerFile(null);
-        setFormMessage('Announcement slide added successfully.');
+        setFormMessage('Announcement slide added successfully. ✓');
         setIsSaving(false);
     }
 
@@ -419,6 +547,7 @@ export function AnnouncementsPage({ session }) {
     const statusColor = { live: '#15803d', scheduled: '#b45309', expired: '#dc2626', inactive: '#6b7280' };
 
     return (
+        <>
         <div className="dash-page">
             <div className="dash-breadcrumb">
                 <span className="dash-breadcrumb-root">Alkash-Trans Admin</span>
@@ -483,15 +612,35 @@ export function AnnouncementsPage({ session }) {
                             )}
                         </div>
                     ) : (
-                        <div className="ann-form-row">
-                            <label style={{ flex: 1 }}>
-                                <span>Upload Banner Image</span>
-                                <input type="file" accept="image/*" onChange={e => setBannerFile(e.target.files?.[0] || null)} />
-                            </label>
-                            <label style={{ flex: 2 }}>
-                                <span>Or Banner Image URL</span>
-                                <input type="url" placeholder="https://..." value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} />
-                            </label>
+                        <div style={{ padding: '1.25rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                            <div style={{ flex: 1, minHeight: '60px', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                {formData.imageUrl ? (
+                                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', width: '100%' }}>
+                                        <img src={formData.imageUrl} alt="preview" style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                                        <div style={{ flex: 1 }}>
+                                            <p style={{ margin: '0 0 0.25rem', fontSize: '0.9rem', fontWeight: 500, color: 'var(--navy)' }}>Image selected</p>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Click buttons below to change</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ width: '100%', textAlign: 'center', color: '#9ca3af' }}>
+                                        <p style={{ margin: 0, fontSize: '0.9rem' }}>No image selected yet</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button type="button" onClick={() => setShowImageUpload(true)} style={{ background: 'var(--blue)', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                                    📤 Upload
+                                </button>
+                                <button type="button" onClick={() => setShowImageGallery(true)} style={{ background: '#f3f4f6', color: 'var(--navy)', border: '1px solid #d1d5db', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                                    📚 Library
+                                </button>
+                                {formData.imageUrl && (
+                                    <button type="button" onClick={() => setFormData({ ...formData, imageUrl: '' })} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                                        ✕ Remove
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -575,6 +724,27 @@ export function AnnouncementsPage({ session }) {
             </div>
         </div>
         </div>
+
+        {showImageUpload && (
+            <ImageUploadDialog
+                onImageReady={(base64, imgId) => {
+                    setFormData({ ...formData, imageUrl: base64 });
+                    incrementImageUsage(imgId);
+                }}
+                onCancel={() => setShowImageUpload(false)}
+            />
+        )}
+
+        {showImageGallery && (
+            <ImageGallery
+                onSelect={(base64, imgId) => {
+                    setFormData({ ...formData, imageUrl: base64 });
+                    incrementImageUsage(imgId);
+                }}
+                onClose={() => setShowImageGallery(false)}
+            />
+        )}
+    </>
     );
 }
 

@@ -2197,6 +2197,234 @@ select {
     min-height: 1.5rem;
     margin: 0;
     color: #267e49;
+}
+
+/* Image Upload Dialog */
+.img-upload-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.img-upload-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+}
+
+.img-upload-modal {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 20px 40px rgba(16, 35, 64, 0.15);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.img-upload-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #f3f4f6;
+    border: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slate);
+}
+
+.img-upload-close:hover {
+    background: #e5e7eb;
+}
+
+.img-upload-modal h3 {
+    margin: 0 0 1.5rem;
+    color: var(--navy);
+    font-size: 1.25rem;
+}
+
+.img-upload-area {
+    border: 2px dashed var(--line-strong);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    background: var(--paper);
+    transition: all 0.2s;
+}
+
+.img-upload-area:hover {
+    border-color: var(--blue);
+    background: rgba(66, 176, 213, 0.05);
+}
+
+.img-upload-area svg {
+    margin-bottom: 1rem;
+    color: var(--blue);
+}
+
+.img-upload-area p {
+    margin: 0.5rem 0;
+    color: var(--ink);
+    font-weight: 500;
+}
+
+.img-upload-area small {
+    display: block;
+    color: var(--slate);
+    font-size: 0.85rem;
+}
+
+.img-preview {
+    margin: 1.5rem 0;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--paper);
+    max-height: 300px;
+}
+
+.img-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.img-preview-info {
+    background: var(--paper);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    margin: 0.75rem 0;
+}
+
+.img-preview-info p {
+    margin: 0;
+    color: var(--ink);
+}
+
+/* Image Gallery Modal */
+.img-gallery-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.img-gallery-modal > div:last-child {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    max-width: 800px;
+    width: 100%;
+    box-shadow: 0 20px 40px rgba(16, 35, 64, 0.15);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.img-gallery-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.img-gallery-modal > :not(.img-upload-close) {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    max-width: 800px;
+    width: 100%;
+    box-shadow: 0 20px 40px rgba(16, 35, 64, 0.15);
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.img-gallery-modal h3 {
+    color: var(--navy);
+    font-size: 1.25rem;
+}
+
+.img-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+}
+
+.img-gallery-item {
+    position: relative;
+    border: 2px solid var(--line);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--paper);
+    cursor: pointer;
+    padding: 0;
+    height: 120px;
+    transition: all 0.2s;
+}
+
+.img-gallery-item:hover {
+    border-color: var(--blue);
+    box-shadow: 0 4px 12px rgba(66, 176, 213, 0.2);
+}
+
+.img-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.img-gallery-info {
+    position: absolute;
+    inset: 0;
+    background: rgba(16, 35, 64, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.img-gallery-item:hover .img-gallery-info {
+    opacity: 1;
+}
+
+.img-gallery-name {
+    color: var(--white);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.img-gallery-usage {
+    color: #60a5fa;
+    font-size: 0.75rem;
+}
     font-weight: 600;
 }
 
