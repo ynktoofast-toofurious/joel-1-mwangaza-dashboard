@@ -41,7 +41,8 @@ app.get("/health", async (_req, res) => {
     await query("select 1 as ok");
     res.json({ status: "ok", service: "available" });
   } catch (error) {
-    res.status(503).json({ status: "degraded", service: "unavailable" });
+    // Keep the container healthy for ALB even when DB is temporarily unavailable.
+    res.json({ status: "degraded", service: "available", database: "unavailable" });
   }
 });
 
