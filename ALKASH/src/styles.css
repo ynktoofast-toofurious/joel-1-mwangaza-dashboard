@@ -2328,6 +2328,35 @@ select {
     cursor: pointer;
 }
 
+.shop-add-overlay {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 3;
+    opacity: 0;
+    transform: scale(0.75);
+    box-shadow: 0 4px 10px rgba(15, 40, 70, 0.25);
+    transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.shop-card:hover .shop-add-overlay,
+.shop-card:focus-within .shop-add-overlay,
+.shop-add-overlay:focus-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.shop-add-overlay:hover {
+    background: var(--blue-deep);
+}
+
+@media (hover: none) {
+    .shop-add-overlay {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 .quote-builder-panel {
     margin-top: 1.8rem;
     display: grid;

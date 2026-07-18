@@ -1308,6 +1308,9 @@ function ServicesPage({ copy }) {
                                         }}
                                     />
                                     <span className="shop-thumb-fallback" aria-hidden="true">{item.icon}</span>
+                                    <button className="shop-add shop-add-overlay" type="button" onClick={() => handleAddToQuote(item)} aria-label={`Add ${item.label} to quote`}>
+                                        +
+                                    </button>
                                 </div>
                                 <h3>{item.label}</h3>
                                 <p className="shop-rating">{'★'.repeat(5)} <span>{item.rating.toFixed(1)}</span></p>
@@ -1316,9 +1319,6 @@ function ServicesPage({ copy }) {
                                     <s>${comparePrice.toLocaleString()}</s>
                                 </div>
                                 <p className="shop-save">Save ${savings.toLocaleString()}</p>
-                                <button className="shop-add" type="button" onClick={() => handleAddToQuote(item)} aria-label={`Add ${item.label} to quote`}>
-                                    +
-                                </button>
                             </article>
                         );
                     })}
