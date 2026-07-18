@@ -1827,7 +1827,7 @@ function Footer({ copy }) {
             <div className="container footer-bottom">
                 <p>
                     Designed and Powered by{' '}
-                    <a href="https://www.mysmartwork.tech/" target="_blank" rel="noopener noreferrer">YNK-Tech USA</a>
+                    <a href="https://ynk-techusa.com/" target="_blank" rel="noopener noreferrer">YNK-Tech USA</a>
                 </p>
             </div>
         </footer>
