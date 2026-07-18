@@ -949,6 +949,14 @@ select {
         animation: none;
     }
 
+    .ask-alkash-fab-ring {
+        animation: none;
+    }
+
+    .ask-alkash-panel {
+        transition: none;
+    }
+
     .island-overlay,
     .island-overlay-panel {
         animation: none;
@@ -3429,6 +3437,25 @@ select {
     margin-bottom: 1rem;
 }
 
+.footer-bottom {
+    margin-top: 2rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    text-align: center;
+}
+
+.footer-bottom p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.footer-bottom a {
+    color: var(--white);
+    font-weight: 700;
+    text-decoration: underline;
+}
+
 .whatsapp-float {
     position: fixed;
     right: 1.2rem;
@@ -3474,6 +3501,235 @@ select {
     padding: 0.45rem 0.8rem;
     cursor: pointer;
     margin-bottom: 0.7rem;
+}
+
+/* Ask Alkash floating assistant */
+.ask-alkash-fab {
+    position: fixed;
+    right: 1.2rem;
+    bottom: 1.2rem;
+    z-index: 270;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: var(--navy);
+    color: var(--white);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: 0 14px 28px rgba(16, 35, 64, 0.32);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.ask-alkash-fab:hover,
+.ask-alkash-fab:focus-visible {
+    background: var(--blue-deep);
+    transform: scale(1.06);
+}
+
+.ask-alkash-fab.is-open {
+    background: var(--blue-deep);
+}
+
+.ask-alkash-fab-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid rgba(29, 111, 149, 0.55);
+    animation: whatsappPulse 2.4s ease-out infinite;
+}
+
+.ask-alkash-fab .hover-label {
+    background: var(--navy);
+}
+
+.ask-alkash-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 265;
+    width: min(380px, 92vw);
+    max-width: 100vw;
+    background: var(--white);
+    border-left: 1px solid var(--line-strong);
+    box-shadow: -18px 0 40px rgba(16, 35, 64, 0.18);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), width 0.28s ease;
+    visibility: hidden;
+}
+
+.ask-alkash-panel.is-open {
+    transform: translateX(0);
+    visibility: visible;
+}
+
+.ask-alkash-panel.is-expanded {
+    width: min(640px, 96vw);
+}
+
+.ask-alkash-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1.1rem 1.2rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.ask-alkash-panel-header strong {
+    display: block;
+    color: var(--navy);
+    font-size: 1.05rem;
+}
+
+.ask-alkash-powered {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--blue-deep);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.ask-alkash-panel-controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.ask-alkash-icon-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--navy);
+    cursor: pointer;
+}
+
+.ask-alkash-icon-btn:hover {
+    background: var(--paper);
+}
+
+.ask-alkash-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.9rem 1.2rem 0;
+}
+
+.ask-alkash-chip {
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--navy);
+    background: var(--paper);
+}
+
+.ask-alkash-chip:hover {
+    background: var(--line);
+}
+
+.ask-alkash-thread {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    align-content: start;
+    gap: 0.65rem;
+    padding: 1rem 1.2rem;
+}
+
+.ask-alkash-bubble {
+    max-width: 92%;
+    border-radius: 12px;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.ask-alkash-bubble p {
+    margin: 0;
+}
+
+.ask-alkash-bubble.assistant {
+    justify-self: start;
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.ask-alkash-bubble.user {
+    justify-self: end;
+    background: var(--navy);
+    color: var(--white);
+}
+
+.ask-alkash-bubble-action {
+    display: inline-block;
+    margin-top: 0.45rem;
+    color: var(--blue-deep);
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
+.ask-alkash-composer {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.85rem 1.2rem 1.1rem;
+    border-top: 1px solid var(--line);
+}
+
+.ask-alkash-composer input {
+    width: 100%;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    padding: 0.65rem 0.95rem;
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.ask-alkash-send-btn {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--white);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.ask-alkash-send-btn:hover:not(:disabled) {
+    background: var(--blue-deep);
+    transform: scale(1.06);
+}
+
+.ask-alkash-send-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .ask-alkash-panel,
+    .ask-alkash-panel.is-expanded {
+        width: 100vw;
+    }
+
+    .ask-alkash-fab {
+        right: 1rem;
+        bottom: 1rem;
+    }
 }
 
 .dashboard-grid-single {
@@ -3620,6 +3876,26 @@ select {
         display: flex;
     }
 
+    .site-nav-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        width: 100%;
+        margin-top: 0.5rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid var(--line);
+    }
+
+    .nav-link-button {
+        background: transparent;
+        border: 0;
+        text-align: left;
+        padding: 0;
+        cursor: pointer;
+        font: inherit;
+    }
+
     .home-metrics,
     .announcement-grid,
     .field-grid,
@@ -3678,7 +3954,11 @@ select {
 /* Home scroll experience enhancements */
 html.scroll-enhanced-home {
     scroll-behavior: smooth;
-    scroll-snap-type: y mandatory;
+    /* proximity (not mandatory) lets the user keep scrolling freely past the
+       final snap section into the footer, instead of the browser refusing
+       to leave the last snap point because there is no further snap target
+       (which felt like the page was "stuck" at the bottom). */
+    scroll-snap-type: y proximity;
     scroll-padding-top: var(--header-offset, 110px);
 }
 

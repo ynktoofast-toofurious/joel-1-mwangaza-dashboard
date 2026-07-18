@@ -154,7 +154,7 @@ export function DashboardOverview({ session, health }) {
 
 const INVENTORY_IMAGE_OVERRIDES_KEY = 'alkashInventoryImageOverrides';
 
-function loadInventoryImageOverrides() {
+export function loadInventoryImageOverrides() {
     try {
         return JSON.parse(localStorage.getItem(INVENTORY_IMAGE_OVERRIDES_KEY) || '{}');
     } catch {

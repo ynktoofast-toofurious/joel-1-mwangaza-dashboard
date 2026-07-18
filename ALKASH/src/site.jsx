@@ -23,7 +23,7 @@ import {
     setUserFeature,
     setUserRole
 } from './portal.js';
-import { DashboardSidebar, InventoryPage, AnnouncementsPage, SEOPage, DashboardOverview, UsersPage } from './dashboard-components.jsx';
+import { DashboardSidebar, InventoryPage, AnnouncementsPage, SEOPage, DashboardOverview, UsersPage, loadInventoryImageOverrides } from './dashboard-components.jsx';
 
 const routes = [
     { key: 'home', href: getMaskedHref('home') },
@@ -368,6 +368,26 @@ function Header({ copy, pageKey, language, setLanguage, session, onLogout }) {
                             </a>
                         );
                     })}
+
+                    <div className="site-nav-actions">
+                        <a className="nav-link" href={getMaskedHref('ask')}>Ask Alkash</a>
+                        {session ? (
+                            <a
+                                className="nav-link"
+                                href={isAdminRole(session.role) ? getMaskedHref('admin') : getMaskedHref('dashboard')}
+                            >
+                                Dashboard
+                            </a>
+                        ) : (
+                            <>
+                                <a className="nav-link" href={getMaskedHref('login')}>Login</a>
+                                <a className="nav-link" href={getMaskedHref('register')}>Register</a>
+                            </>
+                        )}
+                        {session ? (
+                            <button className="nav-link nav-link-button" type="button" onClick={onLogout}>Logout</button>
+                        ) : null}
+                    </div>
                 </nav>
             </div>
         </header>
@@ -436,40 +456,36 @@ function WhatsAppHeroLauncher({ onOpen }) {
     );
 }
 
-function HomeAnnouncementCarousel() {
-    const [slides, setSlides] = useState([]);
-    const [activeIndex, setActiveIndex] = useState(0);
-    const [editingSlide, setEditingSlide] = useState(null);
-
-    useEffect(() => {
-        try {
-            const now = new Date();
-            const stored = JSON.parse(localStorage.getItem('announcements') || '[]');
-            const activeSlides = stored.filter((item) => {
-                if (!item.active) return false;
-                if (item.startDate && new Date(item.startDate) > now) return false;
-                if (item.endDate && new Date(item.endDate) < now) return false;
-                return true;
-            });
-            setSlides(activeSlides);
-        } catch {
-            setSlides([]);
-        }
-    }, []);
-
-    function handleSaveSlide(updatedSlide) {
-        const stored = JSON.parse(localStorage.getItem('announcements') || '[]');
-        const updated = stored.map(s => s.id === updatedSlide.id ? updatedSlide : s);
-        localStorage.setItem('announcements', JSON.stringify(updated));
-        
+function computeActiveAnnouncementSlides() {
+    try {
         const now = new Date();
-        const activeSlides = updated.filter((item) => {
+        const stored = JSON.parse(localStorage.getItem('announcements') || '[]');
+        return stored.filter((item) => {
             if (!item.active) return false;
             if (item.startDate && new Date(item.startDate) > now) return false;
             if (item.endDate && new Date(item.endDate) < now) return false;
             return true;
         });
-        setSlides(activeSlides);
+    } catch {
+        return [];
+    }
+}
+
+function HomeAnnouncementCarousel() {
+    // Loaded synchronously (not in an effect) so the section is already in the
+    // DOM on first paint. The home page's IntersectionObserver reveal effect
+    // (see HomePage) queries snap-section nodes once on mount; if this slide
+    // popped in a tick later via an effect, it would never get observed and
+    // would stay permanently hidden behind the scroll-reveal opacity:0 rule.
+    const [slides, setSlides] = useState(() => computeActiveAnnouncementSlides());
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [editingSlide, setEditingSlide] = useState(null);
+
+    function handleSaveSlide(updatedSlide) {
+        const stored = JSON.parse(localStorage.getItem('announcements') || '[]');
+        const updated = stored.map(s => s.id === updatedSlide.id ? updatedSlide : s);
+        localStorage.setItem('announcements', JSON.stringify(updated));
+        setSlides(computeActiveAnnouncementSlides());
         setEditingSlide(null);
     }
 
@@ -676,6 +692,280 @@ function WhatsAppIslandDemo({ onBack }) {
                 {apiError ? <p className="island-error-note">{apiError}</p> : null}
             </div>
         </div>
+    );
+}
+
+const ASK_ALKASH_STORAGE_KEY = 'askAlkashPanelState';
+
+const askAlkashFaqBase = [
+    {
+        keywords: ['track', 'tracking', 'shipment', 'status', 'package', 'where is'],
+        answer: 'You can track any shipment in real time using its reference number.',
+        action: { label: 'Open Tracking', href: getMaskedHref('tracking') }
+    },
+    {
+        keywords: ['quote', 'price', 'pricing', 'cost', 'rate'],
+        answer: 'Build an instant quote by adding services from the price list.',
+        action: { label: 'Open Quote Builder', href: getMaskedHref('quote') }
+    },
+    {
+        keywords: ['schedule', 'pickup', 'appointment', 'book'],
+        answer: 'Schedule a pickup or drop-off appointment from the Schedule page.',
+        action: { label: 'Open Schedule', href: getMaskedHref('schedule') }
+    },
+    {
+        keywords: ['service', 'services', 'offer'],
+        answer: 'Browse all shipping and logistics services we offer.',
+        action: { label: 'View Services', href: getMaskedHref('services') }
+    },
+    {
+        keywords: ['contact', 'phone', 'email', 'reach', 'address'],
+        answer: 'Reach our team directly by phone, email, or the contact form.',
+        action: { label: 'Contact Us', href: getMaskedHref('contact') }
+    },
+    {
+        keywords: ['case', 'issue', 'problem', 'complaint', 'support'],
+        answer: 'Open a support case and our team will follow up on your issue.',
+        action: { label: 'Open a Case', href: getMaskedHref('ask') }
+    }
+];
+
+const askAlkashAdminFaqs = [
+    {
+        keywords: ['picture', 'image', 'photo', 'inventory'],
+        answer: 'Admins can update service pictures from the Inventory tab in the dashboard — open an item and tap "Edit picture".',
+        action: { label: 'Open Inventory', href: `${getMaskedHref('admin')}#inventory` }
+    },
+    {
+        keywords: ['announcement', 'banner', 'promo', 'carousel'],
+        answer: 'Create or edit homepage announcements from the Announcements tab.',
+        action: { label: 'Open Announcements', href: `${getMaskedHref('admin')}#announcements` }
+    },
+    {
+        keywords: ['seo', 'meta', 'search engine', 'sitemap'],
+        answer: 'Manage page titles, meta descriptions, and search settings from the SEO tab.',
+        action: { label: 'Open SEO Settings', href: `${getMaskedHref('admin')}#seo` }
+    },
+    {
+        keywords: ['user', 'users', 'role', 'permission', 'access'],
+        answer: 'Manage user roles, access, and support cases from the Users tab.',
+        action: { label: 'Open Users', href: `${getMaskedHref('admin')}#users` }
+    },
+    {
+        keywords: ['overview', 'dashboard', 'health', 'stats', 'metric'],
+        answer: 'See platform health and key stats from the Overview tab.',
+        action: { label: 'Open Overview', href: `${getMaskedHref('admin')}#overview` }
+    }
+];
+
+function matchAskAlkashFaq(question, isAdmin) {
+    const text = question.toLowerCase();
+    const pool = isAdmin ? [...askAlkashAdminFaqs, ...askAlkashFaqBase] : askAlkashFaqBase;
+    return pool.find((faq) => faq.keywords.some((keyword) => text.includes(keyword))) || null;
+}
+
+function loadAskAlkashState() {
+    try {
+        const parsed = JSON.parse(sessionStorage.getItem(ASK_ALKASH_STORAGE_KEY) || 'null');
+        if (parsed && typeof parsed === 'object') {
+            return {
+                open: Boolean(parsed.open),
+                expanded: Boolean(parsed.expanded),
+                messages: Array.isArray(parsed.messages) ? parsed.messages : []
+            };
+        }
+    } catch {
+        // ignore corrupt session state
+    }
+    return { open: false, expanded: false, messages: [] };
+}
+
+function saveAskAlkashState(state) {
+    try {
+        sessionStorage.setItem(ASK_ALKASH_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+        // storage unavailable, ignore
+    }
+}
+
+function AskAlkashAssistant({ session }) {
+    const isAdmin = Boolean(session && isAdminRole(session.role));
+    const initial = useMemo(() => loadAskAlkashState(), []);
+    const [open, setOpen] = useState(initial.open);
+    const [expanded, setExpanded] = useState(initial.expanded);
+    const [messages, setMessages] = useState(() => (initial.messages.length ? initial.messages : [{
+        role: 'assistant',
+        text: isAdmin
+            ? "Hi! I'm Ask Alkash, powered by Gemini AI. Ask me how to do something in the admin dashboard and I'll take you to the right page."
+            : "Hi! I'm Ask Alkash, powered by Gemini AI. Ask me about tracking, quotes, scheduling, or services."
+    }]));
+    const [draft, setDraft] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    useEffect(() => {
+        saveAskAlkashState({ open, expanded, messages });
+    }, [open, expanded, messages]);
+
+    const quickActions = isAdmin
+        ? [
+            { label: 'Edit inventory pictures', href: `${getMaskedHref('admin')}#inventory` },
+            { label: 'Manage announcements', href: `${getMaskedHref('admin')}#announcements` },
+            { label: 'SEO settings', href: `${getMaskedHref('admin')}#seo` },
+            { label: 'Manage users', href: `${getMaskedHref('admin')}#users` }
+        ]
+        : [
+            { label: 'Track a shipment', href: getMaskedHref('tracking') },
+            { label: 'Get a quote', href: getMaskedHref('quote') },
+            { label: 'Schedule a pickup', href: getMaskedHref('schedule') },
+            { label: 'Contact support', href: getMaskedHref('contact') }
+        ];
+
+    function appendMessage(message) {
+        setMessages((prev) => [...prev.slice(-9), message]);
+    }
+
+    async function handleSend(event) {
+        event.preventDefault();
+        const text = draft.trim();
+        if (!text || busy) {
+            return;
+        }
+
+        setDraft('');
+        appendMessage({ role: 'user', text });
+
+        const faq = matchAskAlkashFaq(text, isAdmin);
+        if (faq) {
+            appendMessage({ role: 'assistant', text: faq.answer, action: faq.action });
+            return;
+        }
+
+        setBusy(true);
+        try {
+            let payload = null;
+            for (const endpoint of getWebchatCandidates()) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: getWebchatUserId(),
+                            text,
+                            history: messages.map((item) => ({ role: item.role, content: item.text }))
+                        })
+                    });
+
+                    if (!response.ok) {
+                        continue;
+                    }
+
+                    payload = await response.json();
+                    break;
+                } catch {
+                    // try next candidate endpoint
+                }
+            }
+
+            const reply = payload && String(payload.responseText || '').trim();
+            appendMessage(reply
+                ? { role: 'assistant', text: reply }
+                : {
+                    role: 'assistant',
+                    text: "I couldn't find an exact match. Try one of the quick actions below, or open a support case.",
+                    action: { label: 'Open a Case', href: getMaskedHref('ask') }
+                });
+        } catch {
+            appendMessage({
+                role: 'assistant',
+                text: "I couldn't find an exact match. Try one of the quick actions below, or open a support case.",
+                action: { label: 'Open a Case', href: getMaskedHref('ask') }
+            });
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    return createPortal(
+        <>
+            <button
+                type="button"
+                className={`ask-alkash-fab${open ? ' is-open' : ''}`}
+                onClick={() => setOpen((value) => !value)}
+                aria-expanded={open}
+                aria-label={open ? 'Close Ask Alkash assistant' : 'Open Ask Alkash assistant'}
+            >
+                <span className="ask-alkash-fab-ring" aria-hidden="true"></span>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+                    <path d="M12 2a7 7 0 0 0-7 7c0 3.2 1.9 5.1 3 6.2V18a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.8c1.1-1.1 3-3 3-6.2a7 7 0 0 0-7-7Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                    <path d="M9.5 21h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <span className="hover-label">Ask Alkash</span>
+            </button>
+
+            <aside
+                className={`ask-alkash-panel${open ? ' is-open' : ''}${expanded ? ' is-expanded' : ''}`}
+                role="dialog"
+                aria-modal="false"
+                aria-hidden={!open}
+                aria-label="Ask Alkash assistant"
+            >
+                <div className="ask-alkash-panel-header">
+                    <div>
+                        <strong>Ask Alkash</strong>
+                        <span className="ask-alkash-powered">Powered by Gemini AI</span>
+                    </div>
+                    <div className="ask-alkash-panel-controls">
+                        <button
+                            type="button"
+                            className="ask-alkash-icon-btn"
+                            onClick={() => setExpanded((value) => !value)}
+                            aria-label={expanded ? 'Collapse panel' : 'Expand panel'}
+                            title={expanded ? 'Collapse' : 'Expand'}
+                        >
+                            {expanded ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 4h5v5M9 20H4v-5M20 4l-6 6M4 20l6-6" /></svg>
+                            ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 4H4v5M15 20h5v-5M4 4l6 6M20 20l-6-6" /></svg>
+                            )}
+                        </button>
+                        <button type="button" className="ask-alkash-icon-btn" onClick={() => setOpen(false)} aria-label="Close Ask Alkash">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="ask-alkash-quick-actions">
+                    {quickActions.map((action) => (
+                        <a key={action.label} className="ask-alkash-chip" href={action.href}>{action.label}</a>
+                    ))}
+                </div>
+
+                <div className="ask-alkash-thread">
+                    {messages.map((message, index) => (
+                        <div key={index} className={`ask-alkash-bubble ${message.role}`}>
+                            <p>{message.text}</p>
+                            {message.action ? (
+                                <a className="ask-alkash-bubble-action" href={message.action.href}>{message.action.label} →</a>
+                            ) : null}
+                        </div>
+                    ))}
+                </div>
+
+                <form className="ask-alkash-composer" onSubmit={handleSend}>
+                    <input
+                        type="text"
+                        value={draft}
+                        onChange={(event) => setDraft(event.target.value)}
+                        placeholder="Ask a question..."
+                        maxLength={500}
+                    />
+                    <button className="ask-alkash-send-btn" type="submit" disabled={busy} aria-label={busy ? 'Sending…' : 'Send'}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 20l18-8L3 4v6l12 2-12 2z" /></svg>
+                    </button>
+                </form>
+            </aside>
+        </>,
+        document.body
     );
 }
 
@@ -897,11 +1187,16 @@ function AboutPage({ copy }) {
 function ServicesPage({ copy }) {
     const [draftCount, setDraftCount] = useState(() => readQuoteDraft().reduce((sum, item) => sum + item.quantity, 0));
     const [activeTab, setActiveTab] = useState('All');
+    const [imageOverrides] = useState(() => loadInventoryImageOverrides());
 
     const visibleItems = useMemo(
         () => quoteBuilderItems.filter((item) => activeTab === 'All' || item.category === activeTab),
         [activeTab]
     );
+
+    function getItemImageSrc(item) {
+        return imageOverrides[item.key] || getServiceImageHref(item.image);
+    }
 
     function handleAddToQuote(item) {
         const updated = addItemToQuoteDraft(item);
@@ -940,7 +1235,7 @@ function ServicesPage({ copy }) {
                             <article className="shop-card" role="listitem" key={item.key}>
                                 <div className="shop-thumb" data-missing="false">
                                     <img
-                                        src={getServiceImageHref(item.image)}
+                                        src={getItemImageSrc(item)}
                                         alt={item.label}
                                         loading="lazy"
                                         onError={(event) => {
@@ -978,7 +1273,7 @@ function ServicesPage({ copy }) {
                             <div className="quote-item-main">
                                 <img
                                     className="quote-item-image"
-                                    src={getServiceImageHref(item.image)}
+                                    src={getItemImageSrc(item)}
                                     alt={item.label}
                                     loading="lazy"
                                 />
@@ -1427,9 +1722,21 @@ function UserDashboardPage({ session }) {
     );
 }
 
+const ADMIN_DASHBOARD_TABS = ['overview', 'inventory', 'announcements', 'seo', 'users'];
+
 function AdminDashboardPage({ session }) {
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState(() => {
+        const hash = window.location.hash.replace('#', '');
+        return ADMIN_DASHBOARD_TABS.includes(hash) ? hash : 'overview';
+    });
     const [health] = useState(() => getPlatformHealthSummary());
+
+    function changeTab(tab) {
+        setActiveTab(tab);
+        if (ADMIN_DASHBOARD_TABS.includes(tab)) {
+            window.location.hash = tab;
+        }
+    }
 
     if (!session || !isAdminRole(session.role)) {
         return (
@@ -1446,7 +1753,7 @@ function AdminDashboardPage({ session }) {
     return (
         <PageFrame compact eyebrow="Admin" title="Platform Dashboard" intro="Manage inventory, announcements, and SEO settings from one compact view.">
             <div className="admin-dashboard-layout">
-                <DashboardSidebar activeTab={activeTab} onTabChange={setActiveTab} session={session} />
+                <DashboardSidebar activeTab={activeTab} onTabChange={changeTab} session={session} />
                 <main className="dashboard-main">
                     {activeTab === 'overview' && <DashboardOverview session={session} health={health} />}
                     {activeTab === 'inventory' && (
@@ -1496,6 +1803,12 @@ function Footer({ copy }) {
                     <a href="tel:+18178846898">+1 817 884 6898</a>
                     <a href="mailto:info@alkashtrans.com">info@alkashtrans.com</a>
                 </div>
+            </div>
+            <div className="container footer-bottom">
+                <p>
+                    Designed and Powered by{' '}
+                    <a href="https://www.mysmartwork.tech/" target="_blank" rel="noopener noreferrer">YNK-Tech USA</a>
+                </p>
             </div>
         </footer>
     );
@@ -1607,6 +1920,7 @@ function SiteApp({ pageKey }) {
             <Header copy={copy} pageKey={pageKey} language={language} setLanguage={setLanguage} session={session} onLogout={handleLogout} />
             <PageComponent copy={copy} language={language} session={session} onSessionChange={setSession} />
             <Footer copy={copy} />
+            <AskAlkashAssistant session={session} />
         </div>
     );
 }
