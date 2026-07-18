@@ -801,10 +801,53 @@ function AskAlkashAssistant({ session }) {
     }]));
     const [draft, setDraft] = useState('');
     const [busy, setBusy] = useState(false);
+    const panelRef = useRef(null);
+    const threadRef = useRef(null);
 
     useEffect(() => {
         saveAskAlkashState({ open, expanded, messages });
     }, [open, expanded, messages]);
+
+    // Mobile browsers don't shrink the visual viewport for position:fixed
+    // elements when the on-screen keyboard opens (only the "layout" viewport
+    // is used for fixed positioning), so the panel can end up taller than
+    // what's actually visible, hiding the header/history above the keyboard.
+    // window.visualViewport reports the real visible area, so size + position
+    // the panel to match it whenever the keyboard opens/closes or the page
+    // scrolls to keep the focused input in view.
+    useEffect(() => {
+        const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+        const panel = panelRef.current;
+        if (!open || !vv || !panel) {
+            return undefined;
+        }
+
+        function syncViewport() {
+            panel.style.height = `${vv.height}px`;
+            panel.style.top = `${vv.offsetTop}px`;
+            if (threadRef.current) {
+                threadRef.current.scrollTop = threadRef.current.scrollHeight;
+            }
+        }
+
+        syncViewport();
+        vv.addEventListener('resize', syncViewport);
+        vv.addEventListener('scroll', syncViewport);
+        return () => {
+            vv.removeEventListener('resize', syncViewport);
+            vv.removeEventListener('scroll', syncViewport);
+            panel.style.height = '';
+            panel.style.top = '';
+        };
+    }, [open]);
+
+    // Always keep the newest message (the one nearest the composer/keyboard)
+    // in view instead of leaving the user scrolled up in the history.
+    useEffect(() => {
+        if (threadRef.current) {
+            threadRef.current.scrollTop = threadRef.current.scrollHeight;
+        }
+    }, [messages, open]);
 
     const quickActions = isAdmin
         ? [
@@ -909,6 +952,7 @@ function AskAlkashAssistant({ session }) {
             </button>
 
             <aside
+                ref={panelRef}
                 className={`ask-alkash-panel${open ? ' is-open' : ''}${expanded ? ' is-expanded' : ''}`}
                 role="dialog"
                 aria-modal="false"
@@ -946,7 +990,7 @@ function AskAlkashAssistant({ session }) {
                     ))}
                 </div>
 
-                <div className="ask-alkash-thread">
+                <div className="ask-alkash-thread" ref={threadRef}>
                     {messages.map((message, index) => (
                         <div key={index} className={`ask-alkash-bubble ${message.role}`}>
                             <p>{message.text}</p>
