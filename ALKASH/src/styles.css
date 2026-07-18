@@ -336,6 +336,10 @@ select {
     padding: 0 0 1rem;
 }
 
+.site-nav-actions {
+    display: none;
+}
+
 .nav-dropdown-group {
     position: relative;
 }
